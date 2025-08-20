@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Pagamenti Stripe</title>
+</head>
+<body>
+  <h1>Test Stripe Checkout</h1>
+  <button id="checkout">Paga ora</button>
+  <script>
+    document.getElementById("checkout").addEventListener("click", async () => {
+      const res = await fetch("/api/create-checkout-session", { method: "POST" });
+      const data = await res.json();
+      window.location.href = data.url;
+    });
+  </script>
+</body>
+</html>
