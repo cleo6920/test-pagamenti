@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="it">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pagamento annullato</title></head>
+<body style="font-family:system-ui;margin:2rem">
+  <h1>❌ Pagamento annullato</h1>
+  <p>Non è stato effettuato alcun addebito.</p>
+  <p><a href="/">Riprova</a></p>
+</body>
+</html>
