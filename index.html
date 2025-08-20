@@ -1,17 +1,42 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <title>Test Pagamenti Stripe</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Test Pagamenti</title>
+  <style>
+    body{font-family:system-ui,Arial,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#fff;color:#111}
+    .wrap{max-width:520px;text-align:center}
+    button{padding:12px 18px;font-size:18px;border:1px solid #111;border-radius:10px;background:#fff;cursor:pointer}
+    a{display:inline-block;margin-top:14px}
+    pre{background:#f6f6f6;border:1px solid #ddd;padding:10px;border-radius:8px;text-align:left;white-space:pre-wrap}
+  </style>
 </head>
 <body>
-  <h1>Test Stripe Checkout</h1>
-  <button id="checkout">Paga ora</button>
+  <div class="wrap">
+    <h1>Test Stripe Checkout</h1>
+    <p><a href="/api/ping" target="_blank">Apri /api/ping</a></p>
+    <button id="pay">Paga 5,00 € (test)</button>
+    <pre id="out">Pronto…</pre>
+  </div>
+
   <script>
-    document.getElementById("checkout").addEventListener("click", async () => {
-      const res = await fetch("/api/create-checkout-session", { method: "POST" });
-      const data = await res.json();
-      window.location.href = data.url;
+    const out = document.getElementById('out');
+    document.getElementById('pay').addEventListener('click', async () => {
+      out.textContent = 'Creo la sessione di pagamento…';
+      try {
+        const res = await fetch('/api/create-checkout-session', { method: 'POST' });
+        if (!res.ok) {
+          const txt = await res.text();
+          out.textContent = `Errore (${res.status}):\n` + txt;
+          return;
+        }
+        const data = await res.json();
+        out.textContent = JSON.stringify(data, null, 2);
+        if (data.url) window.location.href = data.url;
+      } catch (e) {
+        out.textContent = 'Errore rete: ' + e.message;
+      }
     });
   </script>
 </body>
