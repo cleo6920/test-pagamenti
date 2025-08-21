@@ -1,28 +1,58 @@
-// api/create-checkout-session.js
-import Stripe from "stripe";
+// /api/create-checkout-session.js
+const Stripe = require('stripe');
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  // apiVersion: '2024-04-10', // opzionale: se vuoi fissare la versione
+});
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+module.exports = async (req, res) => {
+  // Solo POST
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { line_items = [], customerEmail } = req.body || {};
+    // Origin assoluto per success/cancel
+    const origin =
+      req.headers.origin ||
+      (req.headers.host ? `https://${req.headers.host}` : 'https://test-pagamenti.vercel.app');
+
+    // Se vuoi passare items dal frontend:
+    // const { items } = req.body || {};
+    // Trasformali tu in line_items...
+    // Per test fisso:
+    const line_items = [
+      {
+        price_data: {
+          currency: 'eur',
+          product_data: { name: 'Prodotto di test' },
+          unit_amount: 500, // 5,00 €
+        },
+        quantity: 1,
+      },
+    ];
 
     const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      payment_method_types: ["card"],
+      mode: 'payment',
+      payment_method_types: ['card'], // solo carta (niente Link per ora)
       line_items,
-      customer_email: customerEmail || undefined,
-      success_url: `${req.headers.origin}/?success=true`,
-      cancel_url: `${req.headers.origin}/?canceled=true`,
+      success_url: `${origin}/success.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/cancel.html`,
     });
 
-    // 🔴 IMPORTANTE: ritorna sessionId, non url
-    res.status(200).json({ sessionId: session.id });
+    // Variante A: ritorniamo direttamente l'URL (non serve Stripe.js sul client)
+    return res.status(200).json({ url: session.url });
+
+    // Variante B: se preferisci Stripe.js nel client:
+    // return res.status(200).json({ id: session.id });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Stripe error:', err);
+    // Mostra di più in test mode, così capiamo subito
+    return res.status(500).json({
+      error: err.message || 'Stripe session creation failed',
+      type: err.type || null,
+      code: err.code || null,
+    });
   }
-}
+};
