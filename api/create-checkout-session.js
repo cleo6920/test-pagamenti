@@ -1,6 +1,8 @@
 // api/create-checkout-session.js
 const Stripe = require('stripe');
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2024-06-20',
+});
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -9,31 +11,39 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // opzionale: leggi eventuali line_items da req.body
-    const body = req.body || {};
-    const line_items = Array.isArray(body.line_items) && body.line_items.length
-      ? body.line_items
-      : [
-          {
-            price_data: {
-              currency: 'eur',
-              product_data: { name: 'Prodotto di test' },
-              unit_amount: 500,
-            },
-            quantity: 1,
-          },
-        ];
+    // leggi eventuale body JSON con line_items
+    let line_items = null;
+    if (req.headers['content-type']?.includes('application/json') && req.body) {
+      if (Array.isArray(req.body.line_items) && req.body.line_items.length > 0) {
+        line_items = req.body.line_items;
+      }
+    }
 
+    // fallback: 1€ di test se non arrivano articoli
+    if (!line_items) {
+      line_items = [
+        {
+          price_data: {
+            currency: 'eur',
+            product_data: { name: 'Prodotto di test' },
+            unit_amount: 100,
+          },
+          quantity: 1,
+        },
+      ];
+    }
+
+    const origin = req.headers.origin || `https://${req.headers.host}`;
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
       line_items,
-      success_url: `${req.headers.origin || 'https://' + req.headers.host}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.origin || 'https://' + req.headers.host}/cancel.html`,
+      success_url: `${origin}/success.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/cancel.html`,
     });
 
-    // *** QUI: restituiamo sessionId coerente col frontend ***
-    return res.status(200).json({ sessionId: session.id });
+    // Risposta coerente col frontend
+    return res.status(200).json({ id: session.id });
   } catch (err) {
     console.error('Stripe create session error:', err);
     return res.status(500).json({ error: err.message || 'Stripe error' });
