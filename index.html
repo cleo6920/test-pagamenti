@@ -1504,6 +1504,7 @@ const updateProductStockInFirestore = useCallback(async (productId, newStockValu
                     }
 
                     // Reindirizza l'utente alla pagina di checkout di Stripe
+                    console.log("DATA DAL BACKEND:", data);
                     const { error } = await stripe.redirectToCheckout({
                         sessionId: data.sessionId, // Stripe ti invia un ID di sessione (data.id dal tuo testfile)
                     });
