@@ -355,7 +355,7 @@ body::after{
                                 <button
                                     onClick={() => onAddToCart(product.id, selectedPack.id, quantity)}
                                     disabled={isAddToCartDisabled}
-                                    className={`flex-grow rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold px-6 py-3 shadow-md transition-all duration-200 button-press-effect ${isAddToCartDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg transform hover:-translate-y-0.5'}`}
+                                    className={`flex-grow rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold px-6 py-3 shadow-md transition-all duration-300 button-press-effect ${isAddToCartDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg transform hover:-translate-y-0.5'}`}
                                 >
                                     {isAddToCartDisabled && !product.inStock ? "Non Disponibile" : isAddToCartDisabled ? "Esaurito / Stock Insuff." : "➕ Aggiungi al carrello"}
                                 </button>
@@ -1436,7 +1436,7 @@ const updateProductStockInFirestore = useCallback(async (productId, newStockValu
 
             // Gestisce il processo di pagamento reale con Stripe
             const handleStripePayment = useCallback(async () => {
-                if (!stripe || !calculateCartTotals.detailedCartItems.length || !areCustomerDetailsValid()) {
+                if (!stripe || calculateCartTotals.detailedCartItems.length === 0 || !areCustomerDetailsValid()) {
                     showNotification("Per favore, compila tutti i dati del cliente e assicurati il carrello non sia vuoto.", "error");
                     return;
                 }
@@ -1445,6 +1445,9 @@ const updateProductStockInFirestore = useCallback(async (productId, newStockValu
 
                 try {
                     // Prepara i dati per l'API di Stripe
+                    // Lasciamo lineItems e customerEmail qui, anche se NON li inviamo nel body
+                    // Questo serve a dimostrare che questi dati *sarebbero* disponibili
+                    // per un'implementazione completa del backend.
                     const lineItems = calculateCartTotals.detailedCartItems.map(item => ({
                         price_data: {
                             currency: 'eur',
@@ -1456,7 +1459,6 @@ const updateProductStockInFirestore = useCallback(async (productId, newStockValu
                         quantity: item.quantity,
                     }));
 
-                    // Aggiungi il costo di spedizione come un elemento separato se non è gratuito
                     if (calculateCartTotals.shippingTotal > 0) {
                         lineItems.push({
                             price_data: {
@@ -1470,22 +1472,25 @@ const updateProductStockInFirestore = useCallback(async (productId, newStockValu
                         });
                     }
 
-                    // Prepara il payload per la funzione serverless
+                    // Prepara il payload per la funzione serverless.
+                    // PER ORA, NON INVIARE IL BODY per emulare il comportamento del testfile funzionante.
+                    // IL VERO FIX SAREBBE QUI: inviare il payload e modificare il backend per leggerlo.
                     const payload = {
-                        line_items: lineItems,
-                        customerEmail: email, // Passa l'email del cliente per Stripe
-                        // Puoi aggiungere qui altri metadati come l'ID utente Firebase o un ID ordine temporaneo
+                         line_items: lineItems, // Mantieni la struttura dati, ma non la inviamo ancora
+                         customerEmail: email,
                     };
 
-                    console.log("DEBUG: Payload inviato a Stripe API:", payload);
+
+                    console.log("DEBUG: Chiamata a Stripe API (senza body, per ora):", checkoutApiEndpoint);
 
                     // Chiamata alla funzione serverless su Vercel
+                    // RIMOSSO IL BODY PER EMULARE IL FILE DI TEST CHE FUNZIONA
                     const response = await fetch(checkoutApiEndpoint, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify(payload),
+                        // body: JSON.stringify(payload), // COMMENTATO: Non inviare il body per farla funzionare come il file di test
                     });
 
                     const data = await response.json();
@@ -1500,7 +1505,7 @@ const updateProductStockInFirestore = useCallback(async (productId, newStockValu
 
                     // Reindirizza l'utente alla pagina di checkout di Stripe
                     const { error } = await stripe.redirectToCheckout({
-                        sessionId: data.sessionId, // Stripe ti invia un ID di sessione
+                        sessionId: data.id, // Stripe ti invia un ID di sessione (data.id dal tuo testfile)
                     });
 
                     if (error) {
