@@ -1,100 +1,90 @@
-// api/stripe-webhook.js
-const Stripe = require('stripe');
+// /api/stripe-webhook.js
+const Stripe = require("stripe");
 
-// ⚠️ USA LA SECRET DI TEST CHE HAI SU VERCEL (sk_test_...)
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2024-06-20',
+  apiVersion: "2024-06-20",
 });
 
-// Utility per leggere il RAW body (richiesto da Stripe per verificare la firma)
+// Legge il RAW body (obbligatorio per verificare la firma)
 function readRawBody(req) {
   return new Promise((resolve, reject) => {
-    try {
-      const chunks = [];
-      req.on('data', (chunk) => chunks.push(chunk));
-      req.on('end', () => resolve(Buffer.concat(chunks)));
-      req.on('error', reject);
-    } catch (err) {
-      reject(err);
-    }
+    const chunks = [];
+    req.on("data", (c) => chunks.push(c));
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+    req.on("error", reject);
   });
 }
 
 module.exports = async (req, res) => {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).send('Method Not Allowed');
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
+    return res.status(405).send("Method Not Allowed");
   }
 
-  const sig = req.headers['stripe-signature'];
+  // 1) Prendiamo il secret e togliamo spazi invisibili
+  const endpointSecret = (process.env.STRIPE_WEBHOOK_SECRET || "").trim();
+  if (!endpointSecret) {
+    console.error("❌ STRIPE_WEBHOOK_SECRET mancante");
+    return res.status(500).send("Missing STRIPE_WEBHOOK_SECRET");
+  }
+
+  const sig = req.headers["stripe-signature"];
   if (!sig) {
-    console.error('❌ Manca l’header stripe-signature');
-    return res.status(400).send('Missing stripe-signature header');
+    console.error("❌ Manca l'header stripe-signature");
+    return res.status(400).send("Missing stripe-signature header");
   }
 
   let rawBody;
   try {
     rawBody = await readRawBody(req);
-    console.log('ℹ️ Webhook chiamato. Raw length:', rawBody.length);
+    console.log("ℹ️ Webhook hit | raw bytes:", rawBody.length, "| sig bytes:", String(sig).length, "| secret len:", endpointSecret.length);
   } catch (err) {
-    console.error('❌ Errore lettura rawBody:', err);
-    return res.status(500).send('Cannot read raw body');
+    console.error("❌ Errore lettura raw body:", err);
+    return res.status(500).send("Cannot read raw body");
   }
 
   let event;
   try {
-    // ⚠️ Se la whsec non corrisponde esattamente, qui cadrai
-    event = stripe.webhooks.constructEvent(
-      rawBody,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
+    // 2) Verifica firma con raw body e secret TRIMMATO
+    event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
   } catch (err) {
-    console.error('❌ Verifica firma webhook fallita:', err.message);
+    console.error("❌ Firma webhook NON valida:", err.message);
     return res.status(401).send(`Webhook signature error: ${err.message}`);
   }
 
   try {
+    console.log("✅ Evento ricevuto:", event.type);
+
     switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object;
-        console.log('✅ checkout.session.completed', {
-          sessionId: session.id,
-          email: session.customer_details?.email,
-          name: session.customer_details?.name,
-          amount_total: session.amount_total,
-          currency: session.currency,
-          shipping: session.shipping_details,
+      case "checkout.session.completed": {
+        const s = event.data.object;
+        console.log("💰 checkout.session.completed", {
+          sessionId: s.id,
+          email: s.customer_details?.email || "",
+          amount_total: s.amount_total,
+          currency: s.currency,
+          shipping_ok: Boolean(s.shipping_details),
         });
         break;
       }
-
-      case 'payment_intent.succeeded': {
+      case "payment_intent.succeeded": {
         const pi = event.data.object;
-        console.log('✅ payment_intent.succeeded', {
-          id: pi.id,
-          amount: pi.amount,
-          currency: pi.currency,
-        });
+        console.log("💚 payment_intent.succeeded", { id: pi.id, amount: pi.amount, currency: pi.currency });
         break;
       }
-
-      case 'payment_intent.payment_failed': {
+      case "payment_intent.payment_failed": {
         const pi = event.data.object;
-        console.warn('⚠️ payment_intent.payment_failed', {
-          id: pi.id,
-          last_payment_error: pi.last_payment_error?.message,
-        });
+        console.warn("⚠️ payment_intent.payment_failed", { id: pi.id, err: pi.last_payment_error?.message });
         break;
       }
-
       default:
-        console.log('ℹ️ Evento non gestito:', event.type);
+        console.log("ℹ️ Non gestito:", event.type);
     }
 
+    // 3) Risposta veloce a Stripe
     return res.status(200).json({ received: true });
   } catch (err) {
-    console.error('❌ Errore nel handler:', err);
-    return res.status(500).json({ error: 'Webhook handler error' });
+    console.error("💥 Errore handler:", err);
+    return res.status(500).json({ error: "Webhook handler error" });
   }
 };
