@@ -2031,6 +2031,93 @@ const updateProductStockInFirestore = useCallback(async (productId, newStockValu
   });
 })();
 </script>
+<script>
+(() => {
+  const ENDPOINT = "https://test-pagamenti.vercel.app/api/checkout-redirect";
+
+  function go() {
+    const f = document.createElement('form');
+    f.method = 'POST';
+    f.action = ENDPOINT;     // l'API risponde con redirect 303 → Stripe
+    document.body.appendChild(f);
+    f.submit();
+  }
+
+  // 1) Se esiste una funzione globale usata dal bottone, la sovrascrivo.
+  try { window.handleStripePayment = async function(){ go(); return false; }; } catch(_) {}
+
+  // 2) Intercetto i click in CAPTURE e blocco altri handler prima che partano.
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('button, a, div, span');
+    if (!btn) return;
+    const txt = (btn.textContent || btn.innerText || '').toLowerCase().trim();
+    if (txt.includes('paga con carta')) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+      go();
+    }
+  }, true); // ← capture = true
+})();
+</script>
+<script>
+(() => {
+  const ENDPOINT = "https://test-pagamenti.vercel.app/api/checkout-redirect";
+
+  function go() {
+    const f = document.createElement('form');
+    f.method = 'POST';
+    f.action = ENDPOINT;          // l'API risponde con 303 → Stripe
+    document.body.appendChild(f);
+    f.submit();
+  }
+
+  // 1) Prova a trovare il bottone "Paga con carta", rimuovi tutti i vecchi listener clonandolo,
+  //    e aggancia SOLO il nostro click handler.
+  function armButton() {
+    const candidates = Array.from(document.querySelectorAll('button, a, div, span'));
+    const target = candidates.find(el => (el.textContent || el.innerText || '')
+                       .toLowerCase().includes('paga con carta'));
+    if (!target) return false;
+
+    // Clona il nodo per rimuovere qualsiasi listener precedente
+    const clone = target.cloneNode(true);
+    target.replaceWith(clone);
+
+    // Aggancia SOLO il nostro
+    clone.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+      go();
+    });
+    return true;
+  }
+
+  // 2) Intercetta comunque i click in cattura come rete di sicurezza
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('button, a, div, span');
+    if (!btn) return;
+    const txt = (btn.textContent || btn.innerText || '').toLowerCase().trim();
+    if (txt.includes('paga con carta')) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+      go();
+    }
+  }, true); // capture
+
+  // 3) Arma il bottone appena il DOM è pronto, e riprova per sicurezza
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => { armButton(); setTimeout(armButton, 300); });
+  } else {
+    armButton(); setTimeout(armButton, 300);
+  }
+
+  // 4) Se esiste una funzione globale usata dal tema, sovrascrivila
+  try { window.handleStripePayment = async function(){ go(); return false; }; } catch(_) {}
+})();
+</script>
 
 </body>
 </html>
