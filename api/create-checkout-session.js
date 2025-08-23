@@ -1,4 +1,4 @@
-// api/create-checkout-session.js — usa il carrello reale + corriere 10 €, con fallback 1 €
+// api/create-checkout-session.js — usa gli items reali + corriere 10€, con fallback 1€
 import Stripe from 'stripe';
 
 export default async function handler(req, res) {
@@ -7,25 +7,20 @@ export default async function handler(req, res) {
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-    // ITEMS dal frontend: [{ name, amount, quantity }] (amount in EURO)
+    // ---- items dal frontend (amount in EURO) ----
     const raw = (req.body && Array.isArray(req.body.items)) ? req.body.items : [];
-
-    // Ignoro eventuale riga "Spedizione" (la gestiamo come shipping option)
+    // ignora eventuale "Spedizione" passata come riga prodotto
     const filtered = raw.filter(it => String(it?.name || '').trim().toLowerCase() !== 'spedizione');
 
-    // Mappo e ripulisco
     const mapped = filtered.map(it => ({
       name: String(it.name || 'Prodotto'),
-      amount: Math.max(0, Number(it.amount ?? it.price ?? 0)),  // € → numero
+      amount: Math.max(0, Number(it.amount ?? it.price ?? 0)), // € → numero
       quantity: Math.max(1, Number(it.quantity ?? it.qty ?? 1)),
     }));
 
     const useFallback = mapped.length === 0;
-
-    // Se non arriva nulla, uso fallback 1 €
     const itemsToUse = useFallback ? [{ name: 'Prodotto di test', amount: 1, quantity: 1 }] : mapped;
 
-    // Converto in centesimi
     const line_items = itemsToUse.map(it => ({
       price_data: {
         currency: 'eur',
@@ -40,12 +35,12 @@ export default async function handler(req, res) {
       payment_method_types: ['card'],
       line_items,
 
-      // Raccogli indirizzo + telefono
+      // raccogli indirizzo + telefono
       billing_address_collection: 'required',
       phone_number_collection: { enabled: true },
       shipping_address_collection: { allowed_countries: ['IT'] },
 
-      // Corriere mostrato in Stripe (10,00 €)
+      // corriere come shipping option (10,00 €)
       shipping_options: [
         {
           shipping_rate_data: {
@@ -60,11 +55,11 @@ export default async function handler(req, res) {
         },
       ],
 
-      // Redirect sul dominio buono
+      // redirect
       success_url: 'https://test-pagamenti.vercel.app/success.html?session_id={CHECKOUT_SESSION_ID}',
       cancel_url:  'https://test-pagamenti.vercel.app/cancel.html',
 
-      // Aiuta a capire in Dashboard se è partito il fallback
+      // per diagnosi in Dashboard
       metadata: { fallback_used: useFallback ? 'true' : 'false' },
     });
 
@@ -74,4 +69,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message || 'Stripe error' });
   }
 }
-
