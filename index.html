@@ -1024,8 +1024,7 @@ body::after{
             const stripePublishableKey = typeof __stripe_publishable_key !== 'undefined' ? __stripe_publishable_key : "pk_test_51RwlzP16mJsbUDZ5C51p9WGQQIXTEzwdiO22w8JhWHd6Lb7FGTrJb2CKnKzE5wJo197AvyKOivDkKsOyIzav8kw600PtHRbt2h"; // Usa la chiave fornita in ambiente Canvas o la tua di test
             
             // QUESTO È IL CAMBIAMENTO FONDAMENTALE: l'endpoint della funzione serverless
-            const checkoutApiEndpoint = "/api/create-checkout-session";
-
+            const checkoutApiEndpoint = "https://test-pagamenti.vercel.app/api/create-checkout-session";
 
             const stripe = useMemo(() => {
                 // Inizializza Stripe solo una volta e solo se Stripe è caricato
