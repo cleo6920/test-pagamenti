@@ -2115,7 +2115,6 @@ const updateProductStockInFirestore = useCallback(async (productId, newStockValu
   }
 
   // 4) Se esiste una funzione globale usata dal tema, sovrascrivila
-  try { window.handleStripePayment = async function(){ go(); return false; }; } catch(_) {}
 })();
 </script>
 
