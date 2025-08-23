@@ -1,81 +1,54 @@
-// api/create-checkout-session.js — robusto: accetta JSON/FORM, GET/POST, fallback 1€
+// api/create-checkout-session.js — carrello reale + shipping option + fallback sicuro
 import Stripe from 'stripe';
 
 export default async function handler(req, res) {
   try {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-    // 1) Permettiamo sia POST che GET (alcuni bottoni possono fare GET per errore)
-    if (req.method !== 'POST' && req.method !== 'GET') {
-      return res.status(405).json({ error: 'Method not allowed' });
-    }
+    // Items dal frontend (attesi: [{ name, amount, quantity }], amount in EURO)
+    const raw = (req.body && Array.isArray(req.body.items)) ? req.body.items : [];
 
-    // 2) Normalizza il body: JSON, form-encoded o query (GET)
-    let items = [];
-    const ct = (req.headers['content-type'] || '').toLowerCase();
+    // Filtra un'eventuale riga "Spedizione" inviata per sbaglio
+    const filtered = raw.filter(it => String(it?.name || '').trim().toLowerCase() !== 'spedizione');
 
-    // a) JSON standard
-    if (req.body && typeof req.body === 'object' && !Array.isArray(req.body)) {
-      if (Array.isArray(req.body.items)) items = req.body.items;
-      else if (Array.isArray(req.body.cartItems)) items = req.body.cartItems;
-    }
-
-    // b) application/x-www-form-urlencoded (es. form HTML)
-    //    Vercel la converte in object tipo { "items[0][name]": "...", ... }
-    if (items.length === 0 && ct.includes('application/x-www-form-urlencoded')) {
-      const b = req.body || {};
-      // supporto semplice: items come JSON in un campo "items"
-      if (b.items && typeof b.items === 'string') {
-        try { items = JSON.parse(b.items); } catch {}
-      }
-    }
-
-    // c) GET con query ?items=[...]
-    if (items.length === 0 && req.method === 'GET') {
-      const q = req.query || {};
-      if (q.items && typeof q.items === 'string') {
-        try { items = JSON.parse(q.items); } catch {}
-      }
-    }
-
-    // 3) Mappatura campi flessibile
-    const mapped = (items || []).map(it => ({
-      name: it.name ?? it.title ?? 'Prodotto',
-      amount: Number(it.amount ?? it.price ?? 0),
-      quantity: Number(it.quantity ?? it.qty ?? 1),
-    })).filter(x => x.quantity > 0);
-
-    // 4) Se vuoto → fallback da 1€
-    const safeItems = mapped.length > 0
-      ? mapped
-      : [{ name: 'Prodotto di test', amount: 1, quantity: 1 }];
-
-    // 5) Costruisci line_items (EURO -> CENT)
-    const line_items = safeItems.map(it => ({
-      price_data: {
-        currency: 'eur',
-        product_data: { name: String(it.name) },
-        unit_amount: Math.round(it.amount * 100),
-      },
-      quantity: it.quantity,
+    // Mappa e sanitizza
+    const mapped = filtered.map(it => ({
+      name: String(it.name || 'Prodotto'),
+      amount: Math.max(0, Number(it.amount || it.price || 0)),   // € → numero
+      quantity: Math.max(1, Number(it.quantity || it.qty || 1)),
     }));
 
-    // 6) Crea sessione (indirizzo + telefono + shipping option 10€)
+    const useFallback = mapped.length === 0;
+
+    const line_items = (useFallback ? [{ name: 'Prodotto di test', amount: 1, quantity: 1 }] : mapped)
+      .map(it => ({
+        price_data: {
+          currency: 'eur',
+          product_data: { name: it.name },
+          unit_amount: Math.round(it.amount * 100), // € → cent
+        },
+        quantity: it.quantity,
+      }));
+
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
       line_items,
 
+      // Dati cliente su Stripe
       billing_address_collection: 'required',
       phone_number_collection: { enabled: true },
       shipping_address_collection: { allowed_countries: ['IT'] },
 
+      // Corriere come shipping option (10,00 €)
       shipping_options: [
         {
           shipping_rate_data: {
             display_name: 'Poste – Standard',
             type: 'fixed_amount',
-            fixed_amount: { amount: 1000, currency: 'eur' },
+            fixed_amount: { amount: 1000, currency: 'eur' }, // 10,00 €
             delivery_estimate: {
               minimum: { unit: 'business_day', value: 2 },
               maximum: { unit: 'business_day', value: 5 },
@@ -85,8 +58,8 @@ export default async function handler(req, res) {
       ],
 
       success_url: 'https://test-pagamenti.vercel.app/success.html?session_id={CHECKOUT_SESSION_ID}',
-      cancel_url: 'https://test-pagamenti.vercel.app/cancel.html',
-      metadata: { robust: 'true' },
+      cancel_url:  'https://test-pagamenti.vercel.app/cancel.html',
+      metadata: { fallback_used: useFallback ? 'true' : 'false' },
     });
 
     return res.status(200).json({ id: session.id, url: session.url });
