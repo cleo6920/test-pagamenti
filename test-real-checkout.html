@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Test Carrello Reale</title>
+</head>
+<body>
+  <h1>Test Carrello Reale → Stripe</h1>
+  <p>Questo invia articoli reali all’API senza usare la console.</p>
+  <button id="go">Procedi al pagamento (100€ + corriere 10€)</button>
+
+  <script>
+    document.getElementById('go').addEventListener('click', async () => {
+      try {
+        const resp = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: [
+              { name: "Miele di Castagno (12×250g)", amount: 100.00, quantity: 1 }
+              // ⚠️ non aggiungere "Spedizione": la mette Stripe come corriere 10 €
+            ]
+          })
+        });
+        const data = await resp.json();
+        if (data.url) location.href = data.url;
+        else alert('Errore: ' + (data.error || 'nessun URL in risposta'));
+      } catch (e) {
+        alert('Eccezione: ' + e.message);
+      }
+    });
+  </script>
+</body>
+</html>
