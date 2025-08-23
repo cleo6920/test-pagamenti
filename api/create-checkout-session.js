@@ -1,4 +1,4 @@
-// api/create-checkout-session.js
+// api/create-checkout-session.js  — versione “sempre 1€” per sbloccarsi
 import Stripe from 'stripe';
 
 export default async function handler(req, res) {
@@ -9,21 +9,11 @@ export default async function handler(req, res) {
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-    // Se arrivano item dal frontend li uso, altrimenti metto un prodotto di test
-    let line_items = [];
-    if (req.body && Array.isArray(req.body.items) && req.body.items.length > 0) {
-      line_items = req.body.items.map((it) => ({
-        price_data: {
-          currency: 'eur',
-          product_data: { name: it.name || 'Prodotto' },
-          // it.amount è in euro → converto in centesimi
-          unit_amount: Math.round((it.amount ?? 0) * 100),
-        },
-        quantity: it.quantity ?? 1,
-      }));
-    } else {
-      // Fallback di test
-      line_items = [
+    // CREA SEMPRE UNA SESSIONE DA 1,00 € (ignora il body)
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [
         {
           price_data: {
             currency: 'eur',
@@ -32,35 +22,38 @@ export default async function handler(req, res) {
           },
           quantity: 1,
         },
-      ];
-    }
+      ],
 
-    // Calcolo origin per i redirect (funziona su Vercel e in locale)
-    const origin = req.headers.origin || `https://${req.headers.host}`;
-
-    // CREAZIONE SESSIONE CHECKOUT
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      payment_method_types: ['card'],
-      line_items,
-
-      // 👇 STEP 1: attivo raccolta INDIRIZZO + TELEFONO
+      // Richiedi indirizzo + telefono
       billing_address_collection: 'required',
       phone_number_collection: { enabled: true },
       shipping_address_collection: { allowed_countries: ['IT'] },
 
-      // Redirect
-      success_url: `${origin}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/cancel.html`,
+      // Mostra corriere 10,00 € (solo per vedere il riquadro “Corriere”)
+      shipping_options: [
+        {
+          shipping_rate_data: {
+            display_name: 'Poste – Standard',
+            type: 'fixed_amount',
+            fixed_amount: { amount: 1000, currency: 'eur' },
+            delivery_estimate: {
+              minimum: { unit: 'business_day', value: 2 },
+              maximum: { unit: 'business_day', value: 5 },
+            },
+          },
+        },
+      ],
+
+      // Redirect fissati al dominio buono
+      success_url: 'https://test-pagamenti.vercel.app/success.html?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: 'https://test-pagamenti.vercel.app/cancel.html',
+      metadata: { version: 'always-1eur' },
     });
 
-    // Risposta al frontend (mantengo id per compatibilità; aggiungo url se ti serve)
     return res.status(200).json({ id: session.id, url: session.url });
   } catch (err) {
-    console.error('Stripe create session error:', err);
+    console.error('Stripe error:', err);
     return res.status(500).json({ error: err.message || 'Stripe error' });
   }
 }
-
-
 
