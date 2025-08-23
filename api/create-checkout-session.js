@@ -1,36 +1,42 @@
-<!doctype html>
-<html lang="it">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Test Checkout</title>
-</head>
-<body>
-  <h1>Test Checkout</h1>
-  <p>Premi il bottone: invia prodotti reali all’API e vai a Stripe.</p>
-  <button id="go">Procedi al pagamento (test)</button>
+// api/create-checkout-session.js
+import Stripe from 'stripe';
 
-  <script>
-    document.getElementById('go').addEventListener('click', async () => {
-      try {
-        const resp = await fetch('/api/create-checkout-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            items: [
-              { name: "Miele di Castagno (12×250g)", amount: 100.00, quantity: 1 },
-              { name: "Spedizione", amount: 10.00, quantity: 1 } // verrà ignorata se hai messo shipping_options
-            ]
-          })
-        });
-        const data = await resp.json();
-        if (data.url) window.location.href = data.url;
-        else alert('Errore: ' + (data.error || 'risposta senza URL'));
-      } catch (e) {
-        alert('Eccezione: ' + e.message);
-      }
+export default async function handler(req, res) {
+  try {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const origin = req.headers.origin || `https://${req.headers.host}`;
+
+    // --- Fallback di test (ignora il carrello e forza 1 €) ---
+    const line_items = [
+      {
+        price_data: {
+          currency: 'eur',
+          product_data: { name: 'Prodotto di test' },
+          unit_amount: 100, // 1,00 €
+        },
+        quantity: 1,
+      },
+    ];
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items,
+      billing_address_collection: 'required',
+      phone_number_collection: { enabled: true },
+      shipping_address_collection: { allowed_countries: ['IT'] },
+      success_url: `${origin}/success.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/cancel.html`,
     });
-  </script>
-</body>
-</html>
+
+    return res.status(200).json({ id: session.id, url: session.url });
+  } catch (err) {
+    console.error('Stripe create session error:', err);
+    return res.status(500).json({ error: err.message || 'Stripe error' });
+  }
+}
 
