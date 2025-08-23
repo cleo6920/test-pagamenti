@@ -47,13 +47,10 @@ export default async function handler(req, res) {
 
     // 🧹 Ignora eventuale riga "Spedizione" inviata nel payload (evita doppio addebito)
     const filtered = (items || []).filter(
-      (it) =>
-        String(it?.name || '')
-          .trim()
-          .toLowerCase() !== 'spedizione'
+      (it) => String(it?.name || '').trim().toLowerCase() !== 'spedizione'
     );
 
-    // Se ancora vuoto, fallback di sicurezza (1 €) per non bloccare il flusso
+    // Se non arriva nulla → fallback di sicurezza (1 €) per non bloccare il flusso
     const safeItems =
       filtered.length > 0
         ? filtered
@@ -95,7 +92,7 @@ export default async function handler(req, res) {
         },
       ],
 
-      // Info utili per debug in Dashboard
+      // Info utili in Dashboard per capire se è partito il fallback
       metadata: {
         fallback_used: filtered.length === 0 ? 'true' : 'false',
       },
@@ -110,3 +107,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message || 'Stripe error' });
   }
 }
+
