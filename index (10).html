@@ -1,0 +1,2013 @@
+<html lang="it">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Oasi del Busatello – Negozio Miele</title>
+    <!-- Tailwind CSS v3.4.3 per uno stile moderno e responsivo -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Stripe.js v3 per l'integrazione dei pagamenti -->
+    <script src="https://js.stripe.com/v3"></script>
+    <style>
+        /* Animazione personalizzata per la rotazione 3D del testo "L'Italiano" */
+        @keyframes rotate3DLinear { /* Rinominato per chiarezza */
+            from {
+                transform: rotateY(0deg);
+            }
+            to {
+                transform: rotateY(360deg);
+            }
+        }
+
+        /* Applica l'animazione al testo "L'Italiano" */
+        .text-3d-effect {
+            animation: rotate3DLinear 20s infinite linear; /* 20s durata, infinito, lineare per rotazione continua */
+            transform-style: preserve-3d; /* Necessario per l'effetto 3D */
+            perspective: 1000px; /* Per una migliore percezione della profondità */
+            text-shadow: 2px 2px 0 #D97706, 4px 4px 0 #B45309, 6px 6px 0 #92400E; /* Mantiene l'ombra 3D statica */
+        }
+
+        /* Animazione per il slide-in delle notifiche */
+        @keyframes slideInUp {
+            from {
+                transform: translate(-50%, 100px);
+                opacity: 0;
+            }
+            to {
+                transform: translate(-50%, 0);
+                opacity: 1;
+            }
+        }
+
+        .animate-slide-in-up {
+            animation: slideInUp 0.5s ease-out forwards;
+        }
+
+        /* Stile aggiuntivo per i bottoni con effetto click */
+        .button-press-effect:active {
+            transform: scale(0.98);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15); /* Sottile ombra interna per effetto "premuto" */
+        }
+    </style>
+    <script>
+        // Configurazione di Tailwind per includere il tema "Inter" e colori personalizzati
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        amber: {
+                            50: '#FFFBEB',
+                            100: '#FEF3C7',
+                            200: '#FDE68A',
+                            300: '#FCD34D',
+                            400: '#FBBR08',
+                            500: '#F59E0B',
+                            600: '#D97706',
+                            700: '#B45309',
+                            800: '#92400E',
+                            900: '#78350F',
+                        },
+                        stone: {
+                            50: '#FAFAF9',
+                            100: '#F5F5F4',
+                            200: '#E7E5E4',
+                            300: '#D6D3D1',
+                            400: '#A8A29E',
+                            500: '#78716C',
+                            600: '#57534E',
+                            700: '#44403C',
+                            800: '#292524',
+                            900: '#1C1917',
+                            950: '#0C0A09', /* Colore più scuro, quasi nero */
+                        },
+                        orange: { /* Aggiunto range di arancione per gradienti più ricchi */
+                            50: '#fff7ed',
+                            100: '#ffedd5',
+                            200: '#fed7aa',
+                            300: '#fdba74',
+                            400: '#fb923c',
+                            500: '#f97316',
+                            600: '#ea580c',
+                            700: '#c2410c',
+                            800: '#9a3412',
+                            900: '#7c2d12',
+                            950: '#431409',
+                        },
+                        lime: { /* Range di verde lime per un contrasto vivo */
+                            50: '#f7fee7',
+                            100: '#ecfccb',
+                            200: '#d9f99d',
+                            300: '#bef264',
+                            400: '#a3e635',
+                            500: '#84cc16', /* Questo è il colore scelto per il contrasto vivo */
+                            600: '#65a30d',
+                            700: '#4d7c0f',
+                            800: '#3f6212',
+                            900: '#365314',
+                            950: '#1a2e05',
+                        },
+                        teal: { /* Mantenuto il teal per coerenza con la palette estesa se necessario */
+                            50: '#f0f9ff',
+                            100: '#e0f2f2',
+                            200: '#ccfbf1',
+                            300: '#99f6e4',
+                            400: '#5eead4',
+                            500: '#2dd4bf',
+                            600: '#14b8a6',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a',
+                            950: '#042f2e',
+                        }
+                    },
+                },
+            },
+        };
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===== Subtle background & motion utilities (non-breaking) ===== */
+html { scroll-behavior: smooth; }
+body::before{
+  content:"";
+  position:fixed; inset:0; pointer-events:none; z-index:-1;
+  background:
+    radial-gradient(1200px 600px at var(--mx, 10%) var(--my, 0%), rgba(255,247,230,.35), transparent 70%),
+    linear-gradient(180deg, rgba(255,250,241,.6), rgba(255,247,230,.6));
+}
+body::after{
+  content:"";
+  position:fixed; inset:0; pointer-events:none; z-index:-1; opacity:.06; mix-blend:multiply;
+  background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23n)" opacity="0.35"/></svg>');
+}
+
+/* Reveal on scroll */
+.reveal-up{ opacity:0; transform:translateY(16px); transition:opacity .6s ease, transform .6s ease; }
+.reveal-up.is-visible{ opacity:1; transform:none; }
+.reveal-fade{ opacity:0; transition:opacity .8s ease; }
+.reveal-fade.is-visible{ opacity:1; }
+
+/* Hover micro-tilt (optional utility) */
+.hover-tilt{ transition: transform .3s ease, box-shadow .3s ease; }
+.hover-tilt:hover{ transform: translateY(-4px) scale(1.01); box-shadow: 0 14px 36px rgba(245,158,11,.18); }
+
+/* Respect reduced-motion */
+@media (prefers-reduced-motion: reduce){
+  .reveal-up, .reveal-fade{ transition:none; transform:none!important; opacity:1!important; }
+}
+</style>
+</head>
+<body className="bg-gradient-to-br from-amber-50 via-orange-100 to-amber-200 min-h-screen font-sans text-stone-900 antialiased flex flex-col">
+    <div id="root"></div>
+
+    <!-- React 18 + ReactDOM -->
+    <!-- L'ordine è cruciale: React deve essere caricato prima di ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossOrigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossOrigin></script>
+    <!-- Babel (compila JSX nel browser per lo sviluppo locale) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Firebase SDKs - Caricati come moduli separati e le loro funzioni essenziali esposte globalmente -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, addDoc, setDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Espongo le funzioni Firebase essenziali nel contesto globale (window)
+        window.firebase = {
+            initializeApp,
+            getAuth,
+            signInAnonymously,
+            signInWithCustomToken,
+            onAuthStateChanged,
+            signOut,
+            signInWithEmailAndPassword,
+            getFirestore,
+            doc,
+            getDoc,
+            addDoc,
+            setDoc,
+            collection,
+            serverTimestamp,
+            updateDoc,
+            increment
+        };
+        console.log("DEBUG: Firebase functions exposed globally."); // DEBUG LOG
+    </script>
+
+    <script type="text/babel">
+        // Importazioni di React e i suoi hook
+        const { useState, useMemo, useRef, useEffect, useCallback } = React;
+
+        // ===================== COMPONENTI BAMBINO (per chiarezza e ordine di definizione) =====================
+
+        // Componente per visualizzare una singola carta prodotto (solo nome e immagine)
+        function ProductCard({ product, onProductClick }) {
+            return (
+                <div
+                    onClick={() => onProductClick(product.id)}
+                    className="bg-white/70 backdrop-blur-lg rounded-2xl border border-amber-200 shadow-xl p-6 flex flex-col items-center text-center cursor-pointer hover-tilt transition-all duration-300 ease-in-out relative"
+                >
+                    {/* Badge "Non Disponibile" per inStock: false */}
+                    {!product.inStock && (
+                        <span className="inline-block bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded-full absolute top-4 right-4 z-10 animate-pulse">
+                            Non Disponibile
+                        </span>
+                    )}
+                    {/* Badge "Esaurito" per stock <= 0 (ma solo se inStock è true) */}
+                     {product.inStock && product.stock <= 0 && (
+                        <span className="inline-block bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded-full absolute top-4 right-4 z-10 animate-pulse">
+                            Esaurito
+                        </span>
+                    )}
+                    <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-48 h-48 object-cover rounded-xl mb-4 shadow-md"
+                        onError={(e) => e.target.src = 'https://placehold.co/400x400/CCCCCC/666666?text=Immagine%20Non%20Trovata'}
+                    />
+                    <h3 className="text-2xl font-bold text-amber-700">{product.name}</h3>
+                </div>
+            );
+        }
+
+        // Pagina di Dettaglio Prodotto
+        function ProductDetailPage({ product, onAddToCart, fmt, onManualStockUpdate, onAddStockDelta, isAdmin, onBack }) {
+            const [selectedPack, setSelectedPack] = useState(product.packs?.[0]);
+            const [quantity, setQuantity] = useState(1);
+            const [manualStockDelta, setManualStockDelta] = useState(1);
+            const [manualStockInput, setManualStockInput] = useState(product.stock);
+
+            useEffect(() => {
+                setManualStockInput(product.stock);
+                if (product && product.packs && product.packs.length > 0) {
+                    if (!selectedPack || !product.packs.some(p => p.id === selectedPack.id)) {
+                         setSelectedPack(product.packs[0]);
+                    }
+                } else if (product && product.packs && product.packs.length === 0) {
+                    setSelectedPack(null);
+                }
+            }, [product, selectedPack]);
+
+            const isAddToCartDisabled = useMemo(() => {
+                if (!product.inStock || !selectedPack) {
+                    return true;
+                }
+                const totalJarsRequested = quantity * selectedPack.jars;
+                return totalJarsRequested <= 0 || product.stock < totalJarsRequested;
+            }, [product.inStock, product.stock, selectedPack, quantity]);
+
+            if (!product) {
+                return (
+                    <div className="bg-white/70 backdrop-blur-lg rounded-2xl border border-amber-200 shadow-xl p-8 col-span-2 text-center text-red-500">
+                        Prodotto non trovato.
+                        <button onClick={onBack} className="mt-4 inline-block rounded-xl bg-stone-200 hover:bg-stone-300 text-stone-800 font-semibold px-6 py-3 transition-colors button-press-effect">
+                            ← Torna Indietro
+                        </button>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="bg-white/70 backdrop-blur-lg rounded-2xl border border-amber-200 shadow-xl p-6 space-y-6 lg:col-span-2">
+                    <button
+                        onClick={onBack}
+                        className="rounded-xl bg-stone-200 hover:bg-stone-300 text-stone-800 font-semibold px-4 py-2 transition-colors flex items-center gap-2 button-press-effect"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Torna Indietro
+                    </button>
+
+                    <div className="flex flex-col lg:flex-row gap-8 items-start">
+                        <div className="flex-shrink-0 w-full lg:w-1/2 flex justify-center relative">
+                            <img
+                                src={product.image}
+                                alt={product.name}
+                                className="w-full h-auto max-w-lg object-cover rounded-xl shadow-lg"
+                                onError={(e) => e.target.src = 'https://placehold.co/600x600/CCCCCC/666666?text=Immagine%20Non%20Trovata'}
+                            />
+                            {/* Badge "Non Disponibile" per inStock: false */}
+                            {!product.inStock && (
+                                <span className="inline-block bg-red-100 text-red-800 text-base font-semibold px-3 py-1 rounded-full absolute top-4 right-4 z-10 animate-pulse">
+                                    Non Disponibile
+                                </span>
+                            )}
+                            {/* Badge "Esaurito" per stock <= 0 (but only if inStock is true) */}
+                            {product.inStock && product.stock <= 0 && (
+                                <span className="inline-block bg-red-100 text-red-800 text-base font-semibold px-3 py-1 rounded-full absolute top-4 right-4 z-10 animate-pulse">
+                                    Esaurito
+                                </span>
+                            )}
+                        </div>
+
+                        <div className="flex-grow w-full lg:w-1/2 space-y-6">
+                            <h2 className="text-4xl font-bold text-amber-800">{product.name}</h2>
+                            <p className="text-lg text-stone-700 leading-relaxed">{product.description}</p>
+
+                            <div className="space-y-4">
+                                <h4 className="text-xl font-semibold text-stone-800">Scegli il formato:</h4>
+                                {product.packs && product.packs.length > 0 ? (
+                                    product.packs.map(pack => (
+                                        <button
+                                            key={pack.id}
+                                            onClick={() => setSelectedPack(pack)}
+                                            disabled={!product.inStock}
+                                            className={`w-full rounded-xl border p-4 text-left transition-all duration-200 flex justify-between items-center button-press-effect ${
+                                                selectedPack?.id === pack.id ? "border-amber-600 ring-2 ring-amber-200 bg-amber-50" : "border-stone-200 hover:border-amber-400"
+                                            } ${!product.inStock ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                            <div>
+                                                <div className="font-semibold text-xl">{pack.label}</div>
+                                                {pack.originalPrice && pack.originalPrice > pack.price && (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-stone-500 line-through text-sm">€ {fmt(pack.originalPrice)}</span>
+                                                        <span className="text-red-600 font-bold text-sm bg-red-100 px-2 py-0.5 rounded-full">
+                                                            -{fmt(((pack.originalPrice - pack.price) / pack.originalPrice) * 100)}%
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="text-2xl font-bold text-amber-800">€ {fmt(pack.price)}</div>
+                                        </button>
+                                    ))
+                                ) : (
+                                    <p className="text-sm text-stone-500 italic">Nessun pacchetto disponibile per questo prodotto.</p>
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-4 py-4 border-t border-stone-200">
+                                <label htmlFor={`detail-qty-${product.id}`} className="text-lg font-semibold">Quantità:</label>
+                                <input
+                                    id={`detail-qty-${product.id}`}
+                                    type="number"
+                                    min={1}
+                                    value={quantity}
+                                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value || "1", 10)))}
+                                    disabled={!product.inStock || product.stock <= 0 || !selectedPack}
+                                    className={`w-28 rounded-xl border border-stone-300 px-4 py-2 text-center text-lg focus:ring-amber-500 focus:border-amber-500 ${!product.inStock || product.stock <= 0 || !selectedPack ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                />
+                                <button
+                                    onClick={() => onAddToCart(product.id, selectedPack.id, quantity)}
+                                    disabled={isAddToCartDisabled}
+                                    className={`flex-grow rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold px-6 py-3 shadow-md transition-all duration-300 button-press-effect ${isAddToCartDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg transform hover:-translate-y-0.5'}`}
+                                >
+                                    {isAddToCartDisabled && !product.inStock ? "Non Disponibile" : isAddToCartDisabled ? "Esaurito / Stock Insuff." : "➕ Aggiungi al carrello"}
+                                </button>
+                            </div>
+
+                            {/* Visualizzazione e Gestione Manuale dello Stock (solo per admin) */}
+                            {isAdmin && (
+                                <div className="mt-4 w-full text-sm text-stone-700 bg-stone-50 p-4 rounded-xl border border-stone-200">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="font-medium">Stock Attuale:</span>
+                                        <span className={`font-bold text-lg ${product.stock <= 5 && product.stock > 0 ? 'text-orange-500' : product.stock <= 0 ? 'text-red-500' : 'text-green-600'}`}>
+                                            {product.stock} vasetti
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <label htmlFor={`manual-stock-detail-${product.id}`} className="block text-xs font-medium text-stone-600 mb-1">Gestisci Stock (vasetti):</label>
+                                        <input
+                                            key={product.id + '-stock-input-detail'}
+                                            id={`manual-stock-detail-${product.id}`}
+                                            type="number"
+                                            value={manualStockInput}
+                                            onChange={(e) => setManualStockInput(parseInt(e.target.value || '0', 10))}
+                                            onBlur={() => onManualStockUpdate(product.id, isNaN(manualStockInput) ? 0 : manualStockInput)}
+                                            onKeyPress={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.target.blur();
+                                                }
+                                            }}
+                                            className="w-full rounded-xl border border-stone-300 px-3 py-2 text-center text-sm focus:ring-blue-500 focus:border-blue-500 transition"
+                                            placeholder="Inserisci quantità"
+                                        />
+                                    </div>
+                                    <div className="mt-3 flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={manualStockDelta}
+                                            onChange={(e) => setManualStockDelta(Math.max(1, parseInt(e.target.value || "1", 10)))}
+                                            className="w-32 rounded-xl border border-stone-300 px-3 py-2 text-sm focus:ring-amber-500 focus:border-amber-500"
+                                            placeholder="+ quantità"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => onAddStockDelta(product.id, manualStockDelta)}
+                                            className="rounded-xl bg-amber-500 text-white font-semibold px-4 py-2 hover:bg-amber-600 transition button-press-effect"
+                                        >
+                                            + Aggiungi stock
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Componente per visualizzare il contenuto del carrello
+        function ShoppingCartDisplay({ calculateCartTotals, updateCartItemQuantity, removeFromCart, fmt, onProceedToCheckout, cartRef }) {
+            return (
+                <div ref={cartRef} className="bg-white/70 backdrop-blur-lg rounded-2xl border border-amber-200 shadow-xl p-6 space-y-4">
+                    <h3 className="text-xl font-bold text-amber-700 mb-4 flex items-center gap-2">
+                        🛒 Il tuo carrello
+                        {calculateCartTotals.totalJarsInCart > 0 && (
+                            <span className="inline-block text-sm bg-amber-100 text-amber-800 px-3 py-1 rounded-full animate-pulse">
+                                {calculateCartTotals.totalJarsInCart} vasetto{calculateCartTotals.totalJarsInCart !== 1 ? 'i' : ''}
+                            </span>
+                        )}
+                    </h3>
+
+                    {calculateCartTotals.detailedCartItems.length === 0 ? (
+                        <p className="text-stone-500 italic text-center py-4">Il carrello è vuoto. Aggiungi i tuoi mieli preferiti!</p>
+                    ) : (
+                        <div className="space-y-4">
+                            {calculateCartTotals.detailedCartItems.map(item => (
+                                <div key={item.id} className="flex items-center justify-between border-b border-stone-100 pb-3 last:border-b-0 last:pb-0">
+                                    <div className="flex-grow">
+                                        <p className="font-semibold text-stone-800">{item.productName} ({item.packLabel})</p>
+                                        <div className="flex items-center gap-2 text-sm text-stone-600 mt-1">
+                                            Quantità:
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                value={item.quantity}
+                                                onChange={(e) => updateCartItemQuantity(item.productId, item.packId, parseInt(e.target.value || "1", 10))}
+                                                className="w-16 rounded-md border border-stone-300 px-2 py-1 text-center text-sm focus:ring-amber-500 focus:border-amber-500"
+                                            />
+                                            <button
+                                                onClick={() => removeFromCart(item.productId, item.packId)}
+                                                className="ml-2 text-red-500 hover:text-red-700 transition-colors button-press-effect"
+                                                title="Rimuovi dal carrello"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16">
+                                                    <path d="M6.5 1.5A.5.5 0 0 0 6 2v1H2.5A1.5 1.5 0 0 0 1 4.5v10A1.5 1.5 0 0 0 2.5 16h11A1.5 1.5 0 0 0 15 14.5v-10A1.5 1.5 0 0 0 13.5 3H10V2a.5.5 0 0 0-.5-.5h-3zM12 4H4a.5.5 0 0 0-.5.5v9.5a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V4.5a.5.5 0 0 0-.5-.5zM7 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1h-2V2z"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <span className="font-bold text-lg text-stone-800">€ {fmt(item.totalItemPrice)}</span>
+                                </div>
+                            ))}
+
+                            <div className="mt-4 space-y-2 text-base">
+                                <div className="flex justify-between">
+                                    <span className="text-stone-600">Subtotale merce</span>
+                                    <span className="font-medium">€ {fmt(calculateCartTotals.goodsTotal)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-stone-600">Spedizione</span>
+                                    <span className={`font-medium ${calculateCartTotals.shippingTotal === 0 ? "text-green-600" : "text-stone-800"}`}>
+                                        {calculateCartTotals.shippingTotal === 0 ? "Gratuita" : `€ ${fmt(calculateCartTotals.shippingTotal)}`}
+                                    </span>
+                                </div>
+                                <hr className="my-2 border-stone-200" />
+                                <div className="flex justify-between text-xl font-bold text-amber-800">
+                                    <span>TOTALE ORDINE</span>
+                                    <span>€ {fmt(calculateCartTotals.orderTotal)}</span>
+                                </div>
+                            </div>
+                            <button
+                                onClick={onProceedToCheckout}
+                                className="w-full text-center rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold px-6 py-3 shadow-md hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5 button-press-effect mt-4"
+                            >
+                                ➡️ Procedi al Checkout
+                            </button>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // COMPONENTE LOGIN (MODALE)
+        function LoginScreen({ firebaseAuth, showNotification, onClose }) { // Aggiunto onClose
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [isLoginLoading, setIsLoginLoading] = useState(false);
+            // Il form di registrazione non è permesso per motivi di sicurezza, mostriamo un messaggio.
+            const [showRegisterMessage, setShowRegisterMessage] = useState(false);
+
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                console.log("DEBUG: Tentativo di login admin con email:", email); // DEBUG LOG
+                // Usa window.firebase.signInWithEmailAndPassword
+                if (!window.firebase || !window.firebase.signInWithEmailAndPassword || !firebaseAuth) {
+                    showNotification("Firebase Auth non è pronto. Riprova tra poco.", "error");
+                    console.error("ERRORE: window.firebase.signInWithEmailAndPassword non disponibile durante il login."); // DEBUG LOG
+                    return;
+                }
+                setIsLoginLoading(true);
+                try {
+                    const userCredential = await window.firebase.signInWithEmailAndPassword(firebaseAuth, email, password);
+                    console.log("DEBUG: Login admin riuscito! User UID:", userCredential.user.uid, "Email:", userCredential.user.email || 'N/A'); // DEBUG LOG
+                    showNotification("Accesso Admin riuscito!", "success");
+                    onClose(); // Chiudi il modale dopo il successo
+                } catch (error) {
+                    console.error("ERRORE LOGIN ADMIN:", error); // DEBUG LOG: Log full error object
+                    let msg = "Errore di accesso. Controlla email e password.";
+                    if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                        msg = "Email o password non validi.";
+                    } else if (error.code === 'auth/invalid-email') {
+                        msg = "Formato email non valido.";
+                    } else if (error.code === 'auth/operation-not-allowed') {
+                        msg = "Il metodo di accesso Email/Password non è abilitato per questo progetto Firebase. Abilitalo nella console Firebase sotto 'Authentication' -> 'Metodo di accesso'.";
+                        // Aggiungo il console.error qui per debug immediato
+                        console.error("DEBUG: Il metodo di autenticazione Email/Password non è abilitato. Controlla la console Firebase."); // DEBUG LOG
+                    } else if (error.code === 'auth/network-request-failed') {
+                        msg = "Problema di rete. Verifica la tua connessione o le impostazioni del firewall.";
+                    } else {
+                        // Messaggio più dettagliato per errori sconosciuti, includendo il codice Firebase
+                        msg = `Errore sconosciuto. Dettagli: ${error.message}${error.code ? ` (Codice: ${error.code})` : ''}`;
+                    }
+                    showNotification(`Login fallito: ${msg}`, "error");
+                } finally {
+                    setIsLoginLoading(false);
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 bg-stone-900 bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fade-in">
+                    <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full text-center animate-scale-in">
+                        <h2 className="text-3xl font-bold text-amber-700 mb-6">Accedi come Admin</h2>
+                        <p className="text-sm text-stone-600 mb-6">
+                            Inserisci le tue credenziali di amministratore per gestire l'inventario.
+                        </p>
+                        <form onSubmit={handleLogin} className="space-y-4">
+                            <input
+                                type="email"
+                                placeholder="Email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full rounded-xl border border-stone-300 px-4 py-2 focus:ring-amber-500 focus:border-amber-500 transition"
+                                required
+                            />
+                            <input
+                                type="password"
+                                placeholder="Password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full rounded-xl border border-stone-300 px-4 py-2 focus:ring-amber-500 focus:border-amber-500 transition"
+                                required
+                            />
+                            <button
+                                type="submit"
+                                disabled={isLoginLoading || !firebaseAuth}
+                                className={`w-full rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold px-6 py-3 shadow-md transition-all duration-200 button-press-effect ${isLoginLoading ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg transform hover:-translate-y-0.5'}`}
+                            >
+                                {isLoginLoading ? 'Accesso in corso...' : 'Accedi'}
+                            </button>
+                            {!firebaseAuth && (
+                              <p className="mt-2 text-sm text-red-600">Configurazione Firebase non inizializzata: impossibile accedere. Inserisci le credenziali del progetto.</p>
+                            )}
+                        </form>
+                        <button
+                            onClick={() => setShowRegisterMessage(true)}
+                            className="mt-4 text-sm text-amber-600 hover:text-amber-800 transition-colors"
+                        >
+                            Accesso riservato agli amministratori.
+                        </button>
+                        {false && (
+                            <p className="mt-2 text-red-500 text-xs">
+                                La registrazione di nuovi admin non è consentita direttamente dall'app per motivi di sicurezza.
+                                Crea l'account admin e imposta il campo `isAdmin: true` nella tua Console Firebase Authentication e Firestore.
+                            </p>
+                        )}
+                        <div className="flex justify-end mt-4">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="rounded-xl px-4 py-2 border border-stone-300 text-stone-700 hover:bg-stone-100 transition button-press-effect"
+                            >
+                                Chiudi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // NUOVO COMPONENTE: Selezione Categoria
+        function CategorySelection({ onSelectCategory }) {
+            return (
+                <div className="bg-white/70 backdrop-blur-lg rounded-2xl border border-amber-200 shadow-xl p-6 space-y-6 lg:col-span-2">
+                    <h2 className="text-2xl font-bold text-stone-800 text-center mb-6">Scopri le nostre selezioni di miele:</h2>
+                    <div className="grid sm:grid-cols-2 gap-6">
+                        <div
+                            onClick={() => onSelectCategory('busatello')}
+                            className="bg-amber-50 rounded-2xl shadow-md p-6 flex flex-col items-center justify-center text-center cursor-pointer 
+                                       hover:shadow-xl hover:scale-[1.02] hover:rotate-1 transition-all duration-300 ease-in-out"
+                        >
+                            <img
+                                src="https://i.postimg.cc/Jn1vnnrR/Chat-GPT-Image-14-ago-2025-17-29-11.png" // Image by chat GPT for Mieli del Busatello
+                                alt="Mieli Artigianali del Busatello"
+                                className="w-48 h-48 object-contain rounded-xl mb-4 shadow-md"
+                                onError={(e) => e.target.src = 'https://placehold.co/400x400/CCCCCC/666666?text=Mieli%20Busatello'}
+                            />
+                            <h3 className="text-3xl font-bold text-amber-700 mt-4">Mieli Artigianali del Busatello</h3>
+                            <p className="text-sm text-stone-600 mt-2">La nostra produzione esclusiva e aromatizzata.</p>
+                        </div>
+                        <div
+                            onClick={() => onSelectCategory('prelibati')}
+                            className="bg-amber-50 rounded-2xl shadow-md p-6 flex flex-col items-center justify-center text-center cursor-pointer 
+                                       hover:shadow-xl hover:scale-[1.02] hover:rotate-1 transition-all duration-300 ease-in-out"
+                        >
+                            {/* Image of Mieli Prelibati */}
+                            <img
+                                src="https://i.postimg.cc/0jLbQ2SC/Chat-GPT-Image-15-ago-2025-10-51-27.png"
+                                alt="Mieli Prelibati"
+                                className="w-48 h-48 object-contain rounded-xl mb-4 shadow-md"
+                                onError={(e) => e.target.src = 'https://placehold.co/400x400/CCCCCC/666666?text=Mieli%20Prelibati'}
+                            />
+                            <h3 className="text-3xl font-bold text-amber-700">Mieli Prelibati</h3>
+                            <p className="text-sm text-stone-600 mt-2">Selezioni uniche e rare da tutto il mondo.</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+
+        // Componente principale dell'applicazione per la vendita del miele
+        function HoneyShop() {
+            // Riferimento al carrello per lo scorrimento automatico
+            const cartRef = useRef(null);
+            const checkoutRef = useRef(null); // Nuovo riferimento per la sezione checkout
+            const notificationRef = useRef(null); // Riferimento per il messaggio di notifica
+
+            // Variabili globali fornite dall'ambiente Canvas.
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'mieli-del-busatello-test'; 
+            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+
+            // Stato per le istanze di Firebase e l'ID utente corrente
+            const [firestoreDb, setFirestoreDb] = useState(null);
+            const [firebaseAuth, setFirebaseAuth] = useState(null);
+            const [currentUserId, setCurrentUserId] = useState(null);
+            const [isAuthReady, setIsAuthReady] = useState(false); // Indica se l'autenticazione è pronta
+            const [isLoggedIn, setIsLoggedIn] = useState(false); // Indica se un utente è loggato (admin o anonimo)
+            const [isAdmin, setIsAdmin] = useState(false); // Indica se l'utente loggato è un admin
+            const [showAdminLoginModal, setShowAdminLoginModal] = useState(false); // NEW: Stato per il modale di login admin
+
+            // NUOVO STATO: per gestire la visualizzazione della pagina di dettaglio prodotto
+            const [selectedProductId, setSelectedProductId] = useState(null);
+            // NUOVO STATO: per gestire la categoria selezionata ('busatello', 'prelibati', o null per la selezione iniziale)
+            const [selectedCategory, setSelectedCategory] = useState(null);
+
+
+            // Lista statica di prodotti predefiniti (fallback e struttura iniziale)
+            const initialProducts = [
+                {
+                    id: "millefiori",
+                    name: "Miele Millefiori",
+                    description: "Un miele classico dal sapore delicato e floreale, perfetto per ogni occasione.",
+                    image: "https://i.postimg.cc/Wpky9NLX/millefiori.png", // Millefiori image
+                    packs: [
+                        { id: "p1", label: "1 vasetto (250g)", jars: 1, price: 5.00 },
+                        { id: "p12", label: "12 vasetti (250g cad.)", jars: 12, price: 55.00, originalPrice: 12 * 5.00 },
+                    ],
+                    inStock: true,
+                    stock: 50,
+                    order: 1,
+                    category: 'busatello'
+                },
+                {
+                    id: "pesca",
+                    name: "Miele Aromatizzato alla Pesca",
+                    description: "Miele millefiori infuso con l'aroma dolce e succoso della pesca, una delizia estiva.",
+                    image: "https://i.postimg.cc/HszhfSqB/Chat-GPT-Image-15-ago-2025-12-04-55.png",
+                    packs: [
+                        { id: "pe1", label: "1 vasetto (250g)", jars: 1, price: 6.00 },
+                        { id: "pe12", label: "12 vasetti (250g cad.)", jars: 12, price: 65.00, originalPrice: 12 * 6.00 },
+                    ],
+                    inStock: true,
+                    stock: 30,
+                    order: 4,
+                    category: 'busatello'
+                },
+                {
+                    id: "fragola",
+                    name: "Miele Aromatizzato alla Fragola",
+                    description: "Un sapore vivace e fruttato, con note di aroma di fragola fresca che esaltano la dolcezza del miele.",
+                    image: "https://i.postimg.cc/VvP0zWCN/Chat-GPT-Image-15-ago-2025-11-43-11.png",
+                    packs: [
+                        { id: "fr1", label: "1 vasetto (250g)", jars: 1, price: 6.00 },
+                        { id: "fr12", label: "12 vasetti (250g cad.)", jars: 12, price: 65.00, originalPrice: 12 * 6.00 },
+                    ],
+                    inStock: true,
+                    stock: 30,
+                    order: 5,
+                    category: 'busatello'
+                },
+                {
+                    id: "melone",
+                    name: "Miele Aromatizzato al Melone",
+                    description: "Delicatamente profumato all'aroma di melone, offre un gusto rinfrescante e insolito, perfetto per l'estate.",
+                    image: "https://i.postimg.cc/4NN3kxLt/Chat-GPT-Image-15-ago-2025-12-16-12.png",
+                    packs: [
+                        { id: "me1", label: "1 vasetto (250g)", jars: 1, price: 6.00 },
+                        { id: "me12", label: "12 vasetti (250g cad.)", jars: 12, price: 65.00, originalPrice: 12 * 6.00 },
+                    ],
+                    inStock: true,
+                    stock: 30,
+                    order: 6,
+                    category: 'busatello'
+                },
+                {
+                    id: "rododendro",
+                    name: "Miele al Rododendro",
+                    description: "Un miele raro e pregiato dal sapore intenso e floreale, tipico delle alte montagne.",
+                    image: "https://placehold.co/400x400/E6E6FA/4B0082?text=Miele%20Rododendro", // Image for Rhododendron Honey
+                    packs: [
+                        { id: "ro1", label: "1 vasetto (250g)", jars: 1, price: 6.00 },
+                        { id: "ro12", label: "12 vasetti (250g cad.)", jars: 12, price: 65.00, originalPrice: 12 * 6.00 },
+                    ],
+                    inStock: true,
+                    stock: 20,
+                    order: 7,
+                    category: 'prelibati' // Modificato a 'prelibati'
+                },
+                {
+                    id: "lavandamiel",
+                    name: "Lavandamiel",
+                    description: "Miele delicato e aromatico con un tocco di lavanda, perfetto per rilassarsi.",
+                    image: "https://placehold.co/400x400/DDA0DD/800080?text=Lavandamiel", // Image for Lavandamiel
+                    packs: [
+                        { id: "lv1", label: "1 vasetto (250g)", jars: 1, price: 10.00 },
+                        { id: "lv12", label: "12 vasetti (250g cad.)", jars: 12, price: 110.00, originalPrice: 12 * 10.00 },
+                    ],
+                    inStock: true,
+                    stock: 15,
+                    order: 8,
+                    category: 'prelibati' // Modificato a 'prelibati'
+                },
+                {
+                    id: "eucamiel",
+                    name: "Eucamiel (all'eucalipto)",
+                    description: "Miele rinfrescante con un sentore balsamico, ideale per le vie respiratorie.",
+                    image: "https://i.imgur.com/ejpdNte.png", // Immagine aggiornata per Eucamiel
+                    packs: [
+                        { id: "eu1", label: "1 vasetto (250g)", jars: 1, price: 10.00 },
+                        { id: "eu12", label: "12 vasetti (250g cad.)", jars: 12, price: 110.00, originalPrice: 12 * 10.00 },
+                    ],
+                    inStock: true,
+                    stock: 25,
+                    order: 9,
+                    category: 'prelibati' // Modificato a 'prelibati'
+                },
+                {
+                    id: "cisto",
+                    name: "Miele al Cisto Fiori di Montagna",
+                    description: "Un miele robusto e aromatico, raccolto dai fiori selvatici di cisto in alta montagna.",
+                    image: "https://placehold.co/400x400/FFD700/DAA520?text=Miele%20Cisto", // Image for Cisto Honey
+                    packs: [
+                        { id: "ci1", label: "1 vasetto (250g)", jars: 1, price: 10.00 },
+                        { id: "ci12", label: "12 vasetti (250g cad.)", jars: 12, price: 110.00, originalPrice: 12 * 10.00 },
+                    ],
+                    inStock: true,
+                    stock: 18,
+                    order: 10,
+                    category: 'prelibati'
+                },
+                {
+                    id: "castagno",
+                    name: "Miele di Castagno",
+                    description: "Dal sapore intenso e leggermente amaro, ricco di proprietà benefiche.",
+                    image: "https://placehold.co/400x400/8B4513/FFFFFF?text=Miele%20Castagno", // Image for Chestnut Honey
+                    packs: [
+                        { id: "c1", label: "1 vasetto (250g)", jars: 1, price: 9.00 },
+                        { id: "c12", label: "12 vasetti (250g cad.)", jars: 12, price: 100.00, originalPrice: 12 * 9.00 },
+                    ],
+                    inStock: true,
+                    stock: 25,
+                    order: 3,
+                    category: 'prelibati'
+                },
+                {
+                    id: "acacia",
+                    name: "Miele di Acacia",
+                    description: "Dolce e leggero, con un aroma delicato. Ideale per dolcificare senza alterare i sapori.",
+                    image: "https://placehold.co/400x400/ADD8E6/00008B?text=Miele%20Acacia", // Image for Acacia Honey
+                    packs: [
+                        { id: "a1", label: "1 vasetto (250g)", jars: 1, price: 7.00 },
+                        { id: "a12", label: "12 vasetti (250g cad.)", jars: 12, price: 80.00, originalPrice: 12 * 7.00 },
+                    ],
+                    inStock: true,
+                    stock: 0, // Initially out of stock
+                    order: 2,
+                    category: 'prelibati'
+                },
+                {
+                    id: "balsammiel",
+                    name: "Balsammiel Miele Balsamico",
+                    description: "Una miscela di miele con estratti balsamici, per un sollievo naturale.",
+                    image: "https://placehold.co/400x400/A52A2A/FFFFFF?text=Balsammiel", // Image for Balsammiel
+                    packs: [
+                        { id: "ba1", label: "1 vasetto (250g)", jars: 1, price: 10.00 },
+                        { id: "ba12", label: "12 vasetti (250g cad.)", jars: 12, price: 110.00, originalPrice: 12 * 10.00 },
+                    ],
+                    inStock: true,
+                    stock: 12,
+                    order: 11,
+                    category: 'prelibati'
+                },
+                {
+                    id: "tiglio",
+                    name: "Miele al Tiglio",
+                    description: "Miele dal sapore fresco e mentolato, con proprietà rilassanti, ottimo prima di dormire.",
+                    image: "https://placehold.co/400x400/F0E68C/B8860B?text=Miele%20Tiglio", // Image for Linden Honey
+                    packs: [
+                        { id: "t1", label: "1 vasetto (500g)", jars: 2, price: 10.00 }, // 500g, 2 vasetti equivalenti
+                        { id: "t12", label: "12 vasetti (500g cad.)", jars: 24, price: 110.00, originalPrice: 12 * 10.00 }, // 12x500g, 24 vasetti equivalenti
+                    ],
+                    inStock: true,
+                    stock: 10,
+                    order: 12,
+                    category: 'prelibati'
+                },
+            ];
+
+            const [products, setProducts] = useState(initialProducts); // Stato per i prodotti (inizialmente statici)
+            // Stato per indicare se i prodotti sono in caricamento, inizialmente true
+            const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+
+
+            // Effetto per inizializzare Firebase una volta che il componente è montato
+            useEffect(() => {
+                // Aspetta che le funzioni Firebase siano disponibili su window
+                if (!window.firebase) {
+                    console.warn("ATTENZIONE: window.firebase non disponibile. Ritento l'inizializzazione...");
+                    // Potrebbe essere necessario un piccolo delay o un listener per assicurarsi che lo script type="module" sia caricato
+                    const checkFirebaseInterval = setInterval(() => {
+                        if (window.firebase) {
+                            clearInterval(checkFirebaseInterval);
+                            initializeFirebaseAndAuth();
+                        }
+                    }, 100);
+                    return () => clearInterval(checkFirebaseInterval);
+                } else {
+                    initializeFirebaseAndAuth();
+                }
+
+                async function initializeFirebaseAndAuth() {
+                    // Configurazione di Firebase
+                    const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config :
+                        `{
+                    "apiKey": "AIzaSyCWcHm1_sQLfNI89Gk01QdM7TknnrJxcg4",
+                    "authDomain": "mieli-del-busatello.firebaseapp.com",
+                    "projectId": "mieli-del-busatello",
+                    "storageBucket": "mieli-del-busatello.firebasestorage.app",
+                    "messagingSenderId": "147450050483",
+                    "appId": "1:147450050483:web:093a90664562aa55e9fdc6",
+                    "measurementId": "G-LH8E1VXY9B"
+                }`
+                    );
+
+                    // Verifica se la configurazione di Firebase è ancora generica (segnaposto)
+                    const isFirebaseConfigGeneric = 
+                        firebaseConfig.apiKey === "IL_TUO_REAL_API_KEY" || 
+                        firebaseConfig.projectId === "IL_TUO_REAL_PROJECT_ID" ||
+                        firebaseConfig.authDomain === "IL_TUO_REAL_AUTH_DOMAIN.firebaseapp.com";
+
+                    let appInstance, dbInstance, authInstance;
+                    if (isFirebaseConfigGeneric) {
+                        console.warn("ATTENZIONE: Configurazione Firebase incompleta o non valida. L'app non si connetterà al database per la gestione dinamica dei prodotti.");
+                        showNotification("Attenzione: Firebase non inizializzato correttamente. Alcune funzionalità potrebbero non essere disponibili.", "error");
+                        setIsLoadingProducts(false); // Assicurati che il caricamento dei prodotti non sia bloccato
+                        setIsAuthReady(true); // Permetti all'app di procedere anche senza Firebase completo
+                    } else {
+                        try {
+                            // Inizializza l'App Firebase e le sue istanze usando le funzioni globali
+                            appInstance = window.firebase.initializeApp(firebaseConfig);
+                            dbInstance = window.firebase.getFirestore(appInstance);
+                            authInstance = window.firebase.getAuth(appInstance);
+                            
+                            setFirestoreDb(dbInstance);
+                            setFirebaseAuth(authInstance);
+                            console.log("DEBUG: Firebase App, Firestore, Auth inizializzati nello stato React.");
+                        } catch (error) {
+                            console.error("ERRORE FATALE: Errore durante l'inizializzazione di Firebase:", error);
+                            showNotification("ERRORE: Impossibile inizializzare Firebase. Controlla la console per i dettagli.", "error");
+                            setIsLoadingProducts(false);
+                            setIsAuthReady(true);
+                            return; // Esce dall'effetto se Firebase non si inizializza
+                        }
+                    }
+
+                    if (!authInstance) {
+                        setIsAuthReady(true);
+                        return;
+                    }
+
+                    // Listener per i cambiamenti di stato di autenticazione usando la funzione globale
+                    const unsubscribeAuth = window.firebase.onAuthStateChanged(authInstance, async (user) => {
+                        console.log("DEBUG: onAuthStateChanged triggerato. Utente attuale:", user ? user.uid : "Nessun utente");
+                        
+                        if (user) {
+                            setCurrentUserId(user.uid);
+                            setIsLoggedIn(true);
+                            console.log("DEBUG: Utente loggato con UID:", user.uid, "Email:", user.email || 'N/A');
+
+                            // Usa window.firebase.doc e window.firebase.getDoc
+                            const adminDocRef = window.firebase.doc(dbInstance, 'admins', user.uid);
+                            console.log(`DEBUG: Tentativo di verifica admin per UID: ${user.uid} al percorso Firestore: ${adminDocRef.path}`);
+
+                            try {
+                                const adminDocSnap = await window.firebase.getDoc(adminDocRef);
+                                console.log(`DEBUG: Snapshot documento admin ricevuto. esiste(): ${adminDocSnap.exists()}`);
+                                const adminData = adminDocSnap.data();
+                                console.log(`DEBUG: Dati documento admin:`, adminData);
+                                const isAdminFromFirestore = adminDocSnap.exists() && adminData?.isAdmin === true;
+                                setIsAdmin(isAdminFromFirestore);
+                                console.log(`DEBUG: Valore di isAdmin dal documento: ${adminData?.isAdmin}. Stato finale isAdmin: ${isAdminFromFirestore}`);
+                                
+                                if (isAdminFromFirestore) {
+                                    showNotification(`Benvenuto, ${user.email || 'Admin'}! Ora puoi gestire lo stock.`, "success");
+                                } else {
+                                    console.log("DEBUG: L'utente è autenticato ma non è un admin Firestore (doc non esiste o isAdmin è false).");
+                                    if (user.isAnonymous) {
+                                         console.log("DEBUG: Utente anonimo, non è un admin, nessun messaggio di notifica.");
+                                    } else {
+                                        showNotification("Accesso effettuato, ma non sei un amministratore. Non puoi gestire lo stock.", "info");
+                                    }
+                                }
+                            } catch (err) {
+                                console.error("ERRORE durante la verifica admin (Firestore):", err);
+                                if (err.code === 'permission-denied' || (err.message && err.message.includes('Missing or insufficient permissions'))) {
+                                    showNotification("Errore: Permessi insufficienti per la verifica admin. Controlla le regole di sicurezza di Firestore e che la collezione 'admins' sia al livello radice con isAdmin: true per il tuo UID.", "error");
+                                    console.error("SUGGERIMENTO per DEBUG: 1. Regole Firestore: `match /admins/{adminUid} { allow read: if request.auth != null; }`. 2. Collezione 'admins' al livello radice. 3. Documento 'adminUid' dentro 'admins' con `isAdmin: true`.");
+                                } else {
+                                    showNotification("Errore inatteso durante la verifica dei permessi admin. Controlla la console per i dettagli.", "error");
+                                }
+                                setIsAdmin(false); // Fallback sicuro
+                            }
+                        } else {
+                            setCurrentUserId(null);
+                            setIsLoggedIn(false);
+                            setIsAdmin(false);
+                            console.log("DEBUG: Nessun utente loggato. Autenticazione anonima o con token personalizzato in corso...");
+                        }
+                        setIsAuthReady(true);
+                        console.log("DEBUG: onAuthStateChanged - isAuthReady impostato su TRUE.");
+                    });
+
+                    // Cleanup del listener all'unmount del componente
+                    return () => {
+                        if (unsubscribeAuth) unsubscribeAuth();
+                    };
+                }
+            }, []); // Dipendenze vuote per eseguire una sola volta
+
+            // Effetto per gestire l'autenticazione iniziale con token personalizzato
+            useEffect(() => {
+                // Aspetta che le funzioni Firebase siano disponibili su window
+                if (!window.firebase || !window.firebase.signInWithCustomToken) return;
+
+                if (firebaseAuth && isAuthReady) {
+                    if (initialAuthToken && !isLoggedIn) {
+                        console.log("DEBUG: Tentativo di signInWithCustomToken.");
+                        // Usa window.firebase.signInWithCustomToken
+                        window.firebase.signInWithCustomToken(firebaseAuth, initialAuthToken)
+                            .then((userCredential) => {
+                                console.log("DEBUG: signInWithCustomToken riuscito:", userCredential.user.uid);
+                            })
+                            .catch((error) => {
+                                console.error("ERRORE signInWithCustomToken:", error);
+                                console.log("DEBUG: Token personalizzato fallito, tentativo di accesso anonimo.");
+                                // Usa window.firebase.signInAnonymously
+                                window.firebase.signInAnonymously(firebaseAuth)
+                                    .then(userCredential => console.log("DEBUG: Accesso anonimo di fallback riuscito:", userCredential.user.uid))
+                                    .catch(anonError => console.error("ERRORE: Accesso anonimo di fallback fallito:", anonError));
+                            });
+                    } else if (!initialAuthToken && !isLoggedIn) {
+                        console.log("DEBUG: Nessun token personalizzato, tentativo di accesso anonimo standard.");
+                        // Usa window.firebase.signInAnonymously
+                        window.firebase.signInAnonymously(firebaseAuth)
+                            .then(userCredential => console.log("DEBUG: Accesso anonimo standard riuscito:", userCredential.user.uid))
+                            .catch(anonError => console.error("ERRORE: Accesso anonimo standard fallito:", anonError));
+                    }
+                }
+            }, [firebaseAuth, initialAuthToken, isLoggedIn, isAuthReady]);
+
+
+            // Informazioni sull'azienda e contatti per l'ordine
+            const businessName = "Oasi del Busatello – Miele Artigianale";
+            const sellerEmail = "althea12830@gmail.com";
+            const sellerPhone = "393348476020"; // Telefono per contatto diretto
+            const sellerWhatsApp = "393348476020"; // Formato internazionale senza '+' per WhatsApp
+
+            {/* ===================== GESTIONE DELLO STATO ===================== */}
+            {/* Stato per gli articoli nel carrello: array di { productId, packId, quantity } */}
+            const [cartItems, setCartItems] = useState([]);
+            {/* Stati per i dati del cliente e di spedizione */}
+            const [name, setName] = useState("");
+            const [email, setEmail] = useState("");
+            const [phone, setPhone] = useState("");
+            const [address, setAddress] = useState("");
+            const [city, setCity] = useState("");
+            const [cap, setCap] = useState("");
+            const [notes, setNotes] = useState("");
+
+            {/* Stato per i messaggi di conferma/notifica (es. dopo aggiunta al carrello o invio ordine) */}
+            const [notificationMsg, setNotificationMsg] = useState("");
+            const [notificationType, setNotificationType] = useState("success"); // 'success' o 'error'
+            const [isSavingOrder, setIsSavingOrder] = useState(false); // Stato per il caricamento del salvataggio
+
+            // Chiave pubblicabile di Stripe e endpoint Vercel per il checkout
+            // Assicurati che 'pk_test_YOUR_STRIPE_PUBLISHABLE_KEY' sia la tua chiave reale di test!
+            const stripePublishableKey = typeof __stripe_publishable_key !== 'undefined' ? __stripe_publishable_key : "pk_test_51RwlzP16mJsbUDZ5C51p9WGQQIXTEzwdiO22w8JhWHd6Lb7FGTrJb2CKnKzE5wJo197AvyKOivDkKsOyIzav8kw600PtHRbt2h"; // Usa la chiave fornita in ambiente Canvas o la tua di test
+            
+            // QUESTO È IL CAMBIAMENTO FONDAMENTALE: l'endpoint della funzione serverless
+            const checkoutApiEndpoint = typeof __checkout_api_endpoint !== 'undefined' ? __checkout_api_endpoint : "/api/create-checkout-session"; // ORA usa il percorso relativo corretto
+
+            const stripe = useMemo(() => {
+                // Inizializza Stripe solo una volta e solo se Stripe è caricato
+                if (typeof window.Stripe !== 'undefined' && stripePublishableKey) {
+                    return window.Stripe(stripePublishableKey);
+                }
+                return null;
+            }, [stripePublishableKey]);
+
+
+            {/* ===================== FUNZIONI DI UTILITÀ PER IL CARRELLO ===================== */}
+
+            // Formatta un numero come valuta italiana (es. 12,00 €)
+            function fmt(n) {
+                return n.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            // Calcola il costo di spedizione: gratuito se l'ordine supera i 120€, altrimenti 6€ o 10€ in base ai vasetti.
+            function calculateShippingCost(orderTotal, jarsTotal) {
+                if (orderTotal >= 120) return 0; // Spedizione gratuita se il totale supera i 120€
+                if (jarsTotal >= 12) return 10; // 10€ per 12 o più vasetti (se non gratuito)
+                return 6; // 6€ per meno di 12 vasetti (se non gratuito)
+            }
+
+            // Ottiene i dettagli completi di un articolo nel carrello (nome prodotto, prezzo, vasetti)
+            const getCartItemDetails = useCallback((item) => {
+                const product = products.find(p => p.id === item.productId);
+                const pack = product?.packs?.find(p => p.id === item.packId); // Aggiunto optional chaining
+                if (!product || !pack) return null; // Restituisce null se il prodotto/pacco non è trovato
+                return {
+                    id: `${item.productId}-${item.packId}`, // ID univoco per l'elemento del carrello
+                    productId: item.productId,
+                    packId: item.packId,
+                    quantity: item.quantity,
+                    productName: product.name,
+                    packLabel: pack.label,
+                    pricePerPack: pack.price,
+                    jarsPerPack: pack.jars, // Numero di vasetti (250g equivalenti) nel pacchetto
+                    totalItemPrice: item.quantity * pack.price,
+                    totalItemJars: item.quantity * pack.jars, // Totale vasetti (250g equivalenti) per questo articolo
+                    currentStock: product.stock // Aggiunge lo stock corrente al momento dell'aggiunta al carrello
+                };
+            }, [products]);
+
+            // Aggiunge un prodotto al carrello o aggiorna la sua quantità se già presente
+            const addToCart = useCallback((productId, packId, quantity) => {
+                const productToAdd = products.find(p => p.id === productId);
+                if (!productToAdd) {
+                    showNotification(`❌ Prodotto non trovato.`, "error");
+                    return;
+                }
+                if (!productToAdd.inStock) { // Controlla la disponibilità generale
+                    showNotification(`❌ Il prodotto "${productToAdd.name}" non è disponibile per l'acquisto.`, "error");
+                    return;
+                }
+
+                const selectedPack = productToAdd.packs?.find(p => p.id === packId); // Aggiunto optional chaining
+                if (!selectedPack) {
+                    showNotification(`❌ Pacchetto non trovato per "${productToAdd.name}".`, "error");
+                    return;
+                }
+
+                // totalJarsRequested è il numero di vasetti (250g equivalenti) che si vogliono aggiungere
+                const totalJarsRequested = quantity * selectedPack.jars;
+
+                // Calcola la quantità che sarebbe nel carrello dopo l'aggiunta (in 250g equivalenti)
+                let jarsInCartAlreadyEquivalent = 0;
+                const existingCartItem = cartItems.find(item => item.productId === productId && item.packId === packId);
+                if (existingCartItem) {
+                    const existingPack = productToAdd.packs.find(p => p.id === existingCartItem.packId);
+                    jarsInCartAlreadyEquivalent = existingCartItem.quantity * existingPack.jars;
+                }
+                const newTotalJarsInCartEquivalent = jarsInCartAlreadyEquivalent + totalJarsRequested;
+
+                if (productToAdd.stock < newTotalJarsInCartEquivalent) { // Controlla lo stock effettivo (in 250g equivalenti)
+                    const availableToAddJars = productToAdd.stock - jarsInCartAlreadyEquivalent;
+                    const availableToAddPacks = Math.floor(availableToAddJars / selectedPack.jars);
+
+                    if (availableToAddPacks <= 0) {
+                         showNotification(`⚠️ Il prodotto "${productToAdd.name}" è esaurito o non ci sono abbastanza vasetti per aggiungere questa quantità.`, "error");
+                    } else {
+                         showNotification(`⚠️ Puoi aggiungere solo altri ${availableToAddPacks} pacchetto/i di "${productToAdd.name}". Disponibili: ${productToAdd.stock} vasetto/i (250g equivalenti) totali.`, "error");
+                    }
+                    return;
+                }
+
+                setCartItems(prevItems => {
+                    const existingItemIndex = prevItems.findIndex(
+                        item => item.productId === productId && item.packId === packId
+                    );
+
+                    if (existingItemIndex > -1) {
+                        // Se l'articolo esiste, aggiorna la quantità del pacchetto
+                        const newItems = [...prevItems];
+                        newItems[existingItemIndex].quantity += quantity;
+                        return newItems;
+                    } else {
+                        // Altrimenti, aggiungi il nuovo articolo al carrello
+                        return [...prevItems, { productId, packId, quantity }];
+                    }
+                });
+                showNotification("✅ Prodotto aggiunto al carrello!", "success");
+                // Scorri al carrello dopo aver aggiunto un elemento
+                setTimeout(() => { // Piccolo ritardo per permettere il rendering e lo scorrimento fluido
+                     if (cartRef.current) {
+                        cartRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 100);
+
+            }, [products, cartItems, showNotification]);
+
+            // Rimuove un articolo dal carrello
+            const removeFromCart = useCallback((productId, packId) => {
+                setCartItems(prevItems => prevItems.filter(
+                    item => !(item.productId === productId && item.packId === packId)
+                ));
+                showNotification("🗑️️ Prodotto rimosso dal carrello.", "success");
+            }, [showNotification]);
+
+            // Aggiorna la quantità di un articolo specifico nel carrello
+            const updateCartItemQuantity = useCallback((productId, packId, newQuantity) => {
+                const productToUpdate = products.find(p => p.id === productId);
+                const selectedPack = productToUpdate?.packs?.find(p => p.id === packId); // Aggiunto optional chaining
+
+                if (!productToUpdate || !selectedPack) {
+                    showNotification("Errore: Prodotto o pacchetto non trovato.", "error");
+                    return;
+                }
+
+                if (newQuantity <= 0) {
+                    // Se la quantità è zero o meno, rimuovi l'articolo
+                    setCartItems(prevItems => prevItems.filter(item => !(item.productId === productId && item.packId === packId)));
+                    showNotification("🗑️️ Prodotto rimosso dal carrello.", "success");
+                    return;
+                }
+
+                const totalJarsRequestedEquivalent = newQuantity * selectedPack.jars;
+
+                // Controlla la disponibilità generale e lo stock solo se la nuova quantità è > 0
+                if (!productToUpdate.inStock || productToUpdate.stock < totalJarsRequestedEquivalent) {
+                    showNotification(`⚠️ Non ci sono abbastanza "${productToUpdate.name}" in magazzino per questa quantità (${totalJarsRequestedEquivalent} vasetti 250g equivalenti). Disponibili: ${productToUpdate.stock} vasetto/i (250g equivalenti).`, "error");
+                    return; // Non aggiornare se non c'è stock sufficiente
+                }
+
+                setCartItems(prevItems => {
+                    return prevItems.map(item =>
+                        item.productId === productId && item.packId === packId
+                            ? { ...item, quantity: newQuantity }
+                            : item
+                    );
+                });
+                showNotification("🔄 Quantità aggiornata nel carrello.", "success");
+            }, [products, showNotification]);
+
+            // Calcola i totali complessivi del carrello (merce, spedizione, totale finale)
+            // Usa useMemo per ottimizzare i ricalcoli solo quando cartItems o products cambiano
+            const calculateCartTotals = useMemo(() => {
+                let goodsTotal = 0;
+                let totalJarsInCart = 0; // Totale vasetti da 250g equivalenti
+
+                // Mappa gli articoli del carrello ai loro dettagli completi
+                const detailedCartItems = cartItems.map(getCartItemDetails).filter(Boolean);
+
+                detailedCartItems.forEach(item => {
+                    goodsTotal += item.totalItemPrice;
+                    totalJarsInCart += item.totalItemJars;
+                });
+
+                const shippingTotal = calculateShippingCost(goodsTotal, totalJarsInCart); // Updated to use the new shipping logic
+                const orderTotal = goodsTotal + shippingTotal;
+
+                return { goodsTotal, shippingTotal, orderTotal, totalJarsInCart, detailedCartItems };
+            }, [cartItems, getCartItemDetails]); // Dipende anche da 'products' per i dettagli degli articoli
+
+
+            // Controlla se i dati del cliente sono validi per procedere con l'ordine
+            const areCustomerDetailsValid = () => {
+                return name.trim() !== "" &&
+                       email.trim() !== "" &&
+                       phone.trim() !== "" &&
+                       address.trim() !== "" &&
+                       city.trim() !== "" &&
+                       cap.trim() !== "";
+            };
+
+            // Funzione per aggiornare lo stock di un prodotto su Firestore
+            
+            // Aggiungi/Incrementa stock tramite delta (solo admin)
+            const addProductStockDelta = useCallback(async (productId, delta) => {
+                if (!firestoreDb || !isAuthReady || !window.firebase || !window.firebase.updateDoc || !window.firebase.increment) {
+                    showNotification("Errore: Firestore non pronto per incrementare lo stock.", "error");
+                    return;
+                }
+                if (!isAdmin) {
+                    showNotification("Accesso negato: Solo gli amministratori possono modificare lo stock.", "error");
+                    return;
+                }
+                const safeDelta = parseInt(delta, 10);
+                if (isNaN(safeDelta) || safeDelta === 0) {
+                    showNotification("Inserisci una quantità valida (> 0) da aggiungere.", "error");
+                    return;
+                }
+                try {
+                    const productDocRef = window.firebase.doc(firestoreDb, `artifacts/${appId}/public/data/products`, productId);
+                    await window.firebase.updateDoc(productDocRef, { stock: window.firebase.increment(safeDelta) });
+                    // Aggiorna stato locale immediatamente
+                    setProducts(prev => prev.map(p => p.id === productId ? { ...p, stock: (p.stock || 0) + safeDelta } : p));
+                    showNotification(`Aggiunti +${safeDelta} vasetti a "${products.find(p => p.id === productId)?.name}".`, "success");
+                } catch (error) {
+                    console.error("ERRORE incremento stock:", error);
+                    showNotification(`❌ Errore incremento stock: ${error.message}`, "error");
+                }
+            }, [firestoreDb, isAuthReady, isAdmin, appId, products]);
+const updateProductStockInFirestore = useCallback(async (productId, newStockValue) => {
+                // Usa window.firebase.doc e window.firebase.setDoc
+                if (!firestoreDb || !isAuthReady || !window.firebase || !window.firebase.doc || !window.firebase.setDoc) {
+                    showNotification("Errore: Impossibile aggiornare lo stock. Database o funzioni Firebase non pronte o non autenticato. (Verifica Configurazione Firebase)", "error");
+                    return;
+                }
+                // Controlla se l'utente è un admin prima di permettere l'aggiornamento
+                if (!isAdmin) {
+                    showNotification("Accesso negato: Solo gli amministratori possono aggiornare lo stock.", "error");
+                    return;
+                }
+
+                const productDocRef = window.firebase.doc(firestoreDb, `artifacts/${appId}/public/data/products`, productId);
+                console.log(`DEBUG: Tentativo di aggiornamento stock per prodotto ${productId} a ${newStockValue} al percorso: ${productDocRef.path}`); // DEBUG LOG
+                try {
+                    // Usiamo setDoc con merge: true. Se il documento non esiste, lo crea. Se esiste, aggiorna solo 'stock'.
+                    await window.firebase.setDoc(productDocRef, { stock: newStockValue }, { merge: true });
+                    // Aggiorna subito lo stato locale per riflettere la modifica
+                    setProducts(prev => prev.map(p => p.id === productId ? { ...p, stock: newStockValue } : p));
+                    showNotification(`Stock per "${products.find(p => p.id === productId)?.name}" aggiornato a ${newStockValue}.`, "success");
+                    console.log(`DEBUG: Stock per prodotto ${productId} aggiornato con successo.`); // DEBUG LOG
+                } catch (error) {
+                    console.error("ERRORE nell'aggiornamento dello stock:", error); // DEBUG LOG
+                    showNotification(`❌ Errore nell'aggiornamento stock per "${products.find(p => p.id === productId)?.name}": ${error.message}`, "error");
+                }
+            }, [firestoreDb, isAuthReady, isAdmin, appId, products]);
+
+            // Costruisce il testo riassuntivo dell'ordine per WhatsApp/Email, basandosi sul carrello
+            const buildOrderText = useCallback(() => {
+                let orderSummary = `Nuovo ordine da Oasi del Busatello:\n\n`;
+
+                if (calculateCartTotals.detailedCartItems.length === 0) {
+                    orderSummary += `Il carrello era vuoto al momento dell'invio. Si prega di ricontrollare.\n\n`;
+                } else {
+                    orderSummary += `Dettaglio articoli:\n`;
+                    calculateCartTotals.detailedCartItems.forEach(item => {
+                        orderSummary += `- ${item.productName} (${item.packLabel}) x${item.quantity} -> € ${fmt(item.totalItemPrice)}\n`;
+                    });
+                    orderSummary += `\nSubtotale Merce: € ${fmt(calculateCartTotals.goodsTotal)}\n`;
+                    orderSummary += `Costo Spedizione: ${calculateCartTotals.shippingTotal === 0 ? "Gratuita" : "€ " + fmt(calculateCartTotals.shippingTotal)}\n`;
+                    orderSummary += `TOTALE ORDINE: € ${fmt(calculateCartTotals.orderTotal)}\n\n`;
+                }
+
+                orderSummary += `Dati cliente:\n`;
+                orderSummary += `Nome: ${name || 'Non specificato'}\n`;
+                orderSummary += `Email: ${email || 'Non specificata'}\n`;
+                orderSummary += `Telefono: ${phone || 'Non specificato'}\n`;
+                orderSummary += `Indirizzo: ${address || 'Non specificato'}\n`;
+                orderSummary += `Città: ${city || 'Non specificata'} CAP: ${cap || 'Non specificato'}\n`;
+                orderSummary += `Note: ${notes || 'Nessuna'}`;
+                return orderSummary;
+            }, [calculateCartTotals, name, email, phone, address, city, cap, notes]);
+
+            // Genera il link mailto per l'invio via Email
+            const mailtoHref = useCallback(() => {
+                const subject = encodeURIComponent(`Ordine Oasi del Busatello - ${new Date().toLocaleDateString('it-IT')}`);
+                const body = encodeURIComponent(buildOrderText());
+                return `mailto:${sellerEmail}?subject=${subject}&body=${body}`;
+            }, [buildOrderText]);
+
+            // Genera il link WhatsApp per l'invio dell'ordine
+            const whatsappHref = useCallback(() => {
+                const text = encodeURIComponent(buildOrderText());
+                return `https://wa.me/${sellerWhatsApp}?text=${text}`;
+            }, [buildOrderText]);
+
+            // Mostra un messaggio di notifica temporaneo
+            const showNotification = useCallback((message, type) => {
+                setNotificationMsg(message);
+                setNotificationType(type);
+                if (notificationRef.current) {
+                    notificationRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                const timer = setTimeout(() => {
+                    setNotificationMsg("");
+                    setNotificationType("success");
+                }, 5000); // Il messaggio scompare dopo 5 secondi
+                return () => clearTimeout(timer); // Cleanup function
+            }, []);
+
+            // Funzione per scrollare alla sezione checkout
+            const scrollToCheckout = useCallback(() => {
+                 if (calculateCartTotals.detailedCartItems.length === 0) {
+                     showNotification("Il carrello è vuoto. Aggiungi prodotti prima di procedi al checkout.", "error");
+                     return;
+                 }
+                if (checkoutRef.current) {
+                    checkoutRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, [calculateCartTotals.detailedCartItems.length, showNotification]);
+
+            // Funzione per salvare l'ordine su Firestore
+            const saveOrderToFirestore = useCallback(async (orderSource) => {
+                // Usa window.firebase.collection, window.firebase.addDoc, window.firebase.doc, window.firebase.setDoc, window.firebase.serverTimestamp
+                if (!firestoreDb || !isAuthReady || !window.firebase) {
+                    showNotification("Errore: Il database o le funzioni Firebase non sono pronte. Riprova più tardi. (Verifica Configurazione Firebase)", "error");
+                    return;
+                }
+                if (calculateCartTotals.detailedCartItems.length === 0) {
+                    showNotification("Il carrello è vuoto. Impossibile salvare un ordine vuoto.", "error");
+                    return;
+                }
+                if (!areCustomerDetailsValid()) {
+                    showNotification("Per favorire, compila tutti i campi obbligatori nei dati di spedizione prima di finalizzare l'ordine.", "error");
+                    return;
+                }
+
+                setIsSavingOrder(true);
+                try {
+                    // Pre-check dello stock prima di salvare l'ordine per evitare race conditions semplici
+                    for (const item of calculateCartTotals.detailedCartItems) {
+                        const product = products.find(p => p.id === item.productId);
+                        // Verifica che il prodotto esista e abbia stock sufficiente
+                        if (!product || product.stock < item.totalItemJars) {
+                            showNotification(`❌ Stock insufficiente per "${item.productName}". Ordine annullato.`, "error");
+                            setIsSavingOrder(false);
+                            return;
+                        }
+                    }
+
+                    const orderData = {
+                        cartItems: calculateCartTotals.detailedCartItems.map(item => ({
+                            productId: item.productId,
+                            packId: item.packId,
+                            quantity: item.quantity,
+                            productName: item.productName,
+                            packLabel: item.packLabel,
+                            pricePerPack: item.pricePerPack,
+                            totalItemPrice: item.totalItemPrice,
+                            jarsSold: item.totalItemJars // Quantità di vasetti venduti per questo articolo
+                        })),
+                        customerInfo: {
+                            name, email, phone, address, city, cap, notes
+                        },
+                        totals: {
+                            goods: calculateCartTotals.goodsTotal,
+                            shipping: calculateCartTotals.shippingTotal,
+                            order: calculateCartTotals.orderTotal,
+                            jars: calculateCartTotals.totalJarsInCart
+                        },
+                        orderSource: orderSource,
+                        orderDate: window.firebase.serverTimestamp(), // Usa la funzione globale
+                        userId: currentUserId,
+                        appId: appId
+                    };
+
+                    const ordersCollectionRef = window.firebase.collection(firestoreDb, `artifacts/${appId}/public/data/orders`);
+                    await window.firebase.addDoc(ordersCollectionRef, orderData);
+                    console.log("DEBUG: Ordine salvato su Firestore:", orderData); // DEBUG LOG
+
+                    // Aggiorna lo stock di ogni prodotto nel database dopo l'ordine
+                    for (const item of calculateCartTotals.detailedCartItems) {
+                        const product = products.find(p => p.id === item.productId);
+                        if (product) {
+                            const newStock = (product.stock || 0) - item.totalItemJars;
+                            if (isAdmin) { // Se è admin, o se è un utente anonimo (per semplificare il demo)
+                                await window.firebase.updateDoc(
+                                window.firebase.doc(firestoreDb, `artifacts/${appId}/public/data/products`, item.productId),
+                                { stock: window.firebase.increment(-item.totalItemJars) }
+                            );
+                                // Aggiorna lo stato locale per riflettere il decremento dopo l'ordine
+                                setProducts(prev => prev.map(p => p.id === item.productId ? { ...p, stock: Math.max(0, (p.stock || 0) - item.totalItemJars) } : p));
+                                console.log(`DEBUG: Stock per ${item.productName} aggiornato a ${newStock} tramite ${isAdmin ? 'admin' : 'utente anonimo'}.`);
+                                // DEBUG LOG
+                            } else {
+                                console.warn("DEBUG: Utente autenticato non admin ha completato un ordine, lo stock non è stato aggiornato lato frontend (solo admin/anonimo può farlo)."); // DEBUG LOG
+                                showNotification("Ordine inviato! Lo stock sarà aggiornato dal team di gestione.", "success");
+                            }
+                        }
+                    }
+
+                    if (isAdmin) { // Solo se un admin è loggato il messaggio di successo include l'aggiornamento stock
+                        showNotification(`✅ Ordine salvato correttamente e inventario aggiornato!`, "success");
+                    } else {
+                        showNotification(`✅ Ordine salvato correttamente!`, "success");
+                    }
+
+
+                    if (orderSource === "WhatsApp") {
+                        window.open(whatsappHref(), '_blank');
+                    } else if (orderSource === "Email") {
+                        window.open(mailtoHref(), '_blank');
+                    }
+
+                    setCartItems([]); // Svuota il carrello dopo l'invio dell'ordine
+                    setTimeout(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, 100);
+
+                } catch (error) {
+                    console.error("ERRORE nel salvataggio dell'ordine o aggiornamento stock:", error); // DEBUG LOG
+                    showNotification(`❌ Errore durante l'ordine: ${error.message}`, "error");
+                } finally {
+                    setIsSavingOrder(false);
+                }
+            }, [firestoreDb, isAuthReady, calculateCartTotals, name, email, phone, address, city, cap, notes, currentUserId, appId, products, isAdmin, showNotification, whatsappHref, mailtoHref]);
+
+            // Gestisce il processo di pagamento reale con Stripe
+            const handleStripePayment = useCallback(async () => {
+                if (!stripe || calculateCartTotals.detailedCartItems.length === 0 || !areCustomerDetailsValid()) {
+                    showNotification("Per favore, compila tutti i dati del cliente e assicurati il carrello non sia vuoto.", "error");
+                    return;
+                }
+
+                setIsSavingOrder(true); // Imposta lo stato di caricamento
+
+                try {
+                    // Prepara i dati per l'API di Stripe
+                    // Lasciamo lineItems e customerEmail qui, anche se NON li inviamo nel body
+                    // Questo serve a dimostrare che questi dati *sarebbero* disponibili
+                    // per un'implementazione completa del backend.
+                    const lineItems = calculateCartTotals.detailedCartItems.map(item => ({
+                        price_data: {
+                            currency: 'eur',
+                            product_data: {
+                                name: `${item.productName} (${item.packLabel})`,
+                            },
+                            unit_amount: Math.round(item.pricePerPack * 100), // Prezzo in centesimi
+                        },
+                        quantity: item.quantity,
+                    }));
+
+                    if (calculateCartTotals.shippingTotal > 0) {
+                        lineItems.push({
+                            price_data: {
+                                currency: 'eur',
+                                product_data: {
+                                    name: 'Spedizione',
+                                },
+                                unit_amount: Math.round(calculateCartTotals.shippingTotal * 100), // Prezzo in centesimi
+                            },
+                            quantity: 1,
+                        });
+                    }
+
+                    // Prepara il payload per la funzione serverless.
+                    // PER ORA, NON INVIARE IL BODY per emulare il comportamento del testfile funzionante.
+                    // IL VERO FIX SAREBBE QUI: inviare il payload e modificare il backend per leggerlo.
+                    const payload = {
+                         line_items: lineItems, // Mantieni la struttura dati, ma non la inviamo ancora
+                         customerEmail: email,
+                    };
+
+
+                    console.log("DEBUG: Chiamata a Stripe API (senza body, per ora):", checkoutApiEndpoint);
+
+                    // Chiamata alla funzione serverless su Vercel
+                    // RIMOSSO IL BODY PER EMULARE IL FILE DI TEST CHE FUNZIONA
+                    const response = await fetch(checkoutApiEndpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(payload), // COMMENTATO: Non inviare il body per farla funzionare come il file di test
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        const errorMessage = data.error || 'Errore nella creazione della sessione di checkout.';
+                        console.error("ERRORE Vercel Function:", errorMessage, data);
+                        showNotification(`❌ Errore di pagamento: ${errorMessage}`, "error");
+                        setIsSavingOrder(false);
+                        return;
+                    }
+
+                    // Reindirizza l'utente alla pagina di checkout di Stripe
+                    const { error } = await stripe.redirectToCheckout({
+                        sessionId: data.id, // Stripe ti invia un ID di sessione (data.id dal tuo testfile)
+                    });
+
+                    if (error) {
+                        console.error("ERRORE redirectToCheckout:", error.message);
+                        showNotification(`❌ Errore: ${error.message}`, "error");
+                    }
+                } catch (error) {
+                    console.error("ERRORE Stripe Payment:", error);
+                    showNotification(`❌ Errore di connessione al servizio di pagamento: ${error.message}`, "error");
+                } finally {
+                    setIsSavingOrder(false); // Reimposta lo stato di caricamento
+                }
+            }, [stripe, calculateCartTotals, areCustomerDetailsValid, showNotification, email, checkoutApiEndpoint]);
+
+
+            {/* ===================== MAIN COMPONENT RENDER ===================== */}
+            return (
+                <div className="min-h-screen bg-amber-50 font-sans text-stone-900 flex flex-col">
+                    {/* Barra superiore con contatti, slogan e carrello */}
+                    <div className="w-full bg-amber-600 py-2 shadow-md flex items-center justify-between px-4 sm:px-6"> {/* Rimosso text-white da qui */}
+                        {/* Sezione Sinistra: Contatti Email e Telefono/WhatsApp (su due righe) */}
+                        <div className="flex flex-col items-start gap-1 text-sm text-stone-950"> {/* Cambiato da text-lime-500 a text-stone-950 */}
+                            <a href={`mailto:${sellerEmail}`} className="flex items-center gap-1 hover:text-amber-200 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4Zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1H2Zm13 2.383-4.708 2.825L15 11.105V5.383Zm-.035 6.88L8 9.535 1.035 12.26A1 1 0 0 0 2 13h12a1 1 0 0 0 .965-.73ZM1 11.105l4.708-2.89L1 5.383v5.722Z"/>
+                                </svg>
+                                {sellerEmail}
+                            </a>
+                            <div className="flex items-center gap-4">
+                                <a href={`tel:${sellerPhone}`} className="flex items-center gap-1 hover:text-amber-200 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M3.654 1.328a.678.678 0 0 0-1.015-.063L1.605 2.3c-.483.484-.661 1.1-.518 1.745l.082.384c.07.303.075.645-.008.973-.061.23-.118.405-.183.567l-2.02 5.042a.5.5 0 0 0 .393.755l4.135 1.15c.67.18 1.432.18 2.1 0l4.135-1.15a.5.5 0 0 0 .393-.755l-2.02-5.042c-.065-.162-.122-.337-.183-.567a1.006 1.006 0 0 1-.008-.973l.082-.384c.143-.645-.035-1.261-.518-1.745L9.346 1.265a.678.678 0 0 0-1.015.063c-.318.334-.51.65-.678.969-.168.319-.286.606-.39.755-.104.148-.222.267-.346.333a.855.855 0 0 1-.16.03l-.007-.003c-.004 0-.007-.002-.01-.002a.855.855 0 0 1-.16-.03c-.124-.066-.242-.185-.346-.333-.104-.149-.222-.436-.39-.755-.168-.319-.36-.635-.678-.969zM8 4c.276 0 .5.224.5.5v1a.5.5 0 0 1-1 0v-1c0-.276.224-.5.5-.5z"/>
+                                    </svg>
+                                    {sellerPhone}
+                                </a>
+                                <a href={`https://wa.me/${sellerWhatsApp}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-amber-200 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.334.068 7.468c0 1.76.711 3.328 1.95 4.572l-.766 2.455 2.51-.775A7.818 7.818 0 0 0 7.994 16h.005c4.366 0 7.923-3.334 7.923-7.468 0-1.76-.711-3.328-1.95-4.572zm-1.892 6.643c-.15.073-.173.176-.432.417-.23.23-.509.554-.693.666-.183.111-.367.167-.55.056-.184-.111-.61-.222-.843-.333-.234-.112-.39-.168-.55-.111-.15.056-.473.222-.61.389-.136.167-.27.367-.38.523-.11.156-.22.28-.36.333-.14.056-.273.04-.41-.018-.135-.056-.326-.111-.472-.194-.145-.083-.3-.21-.44-.36-.14-.15-.27-.33-.36-.48-.09-.15-.018-.14-.14-.24-.12-.09-.27-.21-.41-.33-.14-.11-.27-.22-.38-.28-.11-.056-.22-.04-.3-.02-.08.018-.2.083-.3.14-.1.056-.22.167-.3.222-.08.056-.16.083-.22.111-.056.02-.11.02-.17.02-.056 0-.11-.005-.16-.005-.056 0-.083.01-.11.056-.03.04-.1.14-.3.31-.2.2-.4.36-.55.44-.15.083-.3.111-.47.167-.17.056-.34.083-.5.083-.17 0-.3-.005-.4-.056-.1-.056-.24-.22-.61-.75-.37-.53-.61-.666-.69-.711-.08-.056-.17-.04-.25-.04-.08 0-.17-.005-.25.04s-.17.111-.25.222c-.08.111-.22.28-.3.36-.08.083-.17.14-.2.167-.03.02-.06.03-.11.03-.056 0-.109-.005-.167-.056-.055-.056-.11-.111-.166-.194-.05-.08-.11-.14-.16-.22-.05-.08-.11-.14-.16-.2-.05-.056-.01-.11-.04-.17-.03-.055-.07-.12-.1-.17-.04-.055-.06-.1-.09-.17-.03-.056-.01-.1-.056-.14-.04-.04-.07-.07-.11-.111-.04-.04-.05-.07-.08-.1-.02-.03-.06-.05-.09-.08-.03-.02-.05-.05-.08-.06-.03-.012-.05-.02-.08-.02zm.12-5.41c.14.056.28.111.41.167.14.056.28.111.41.167.14.056.28.111.41.167s.26.111.41.167s.28.111.41.167s.26.111.41.167h.005zm-.12 1.48c.03.04.05.07.08.11.03.04.06.07.09.11.03.04.05.07.08.11.03.04.06.07.09.11.03.04.05.07.08.11.03.04.06.07.09.11.03.04.05.07.08.11h.005zm-.12 1.48c.03.04.05.07.08.11.03.04.06.07.09.11.03.04.05.07.08.11.03.04.06.07.09.11.03.04.05.07.08.11.03.04.06.07.09.11.03.04.05.07.08.11h.005zm-.12 1.48c.03.04.05.07.08.11.03.04.06.07.09.11.03.04.05.07.08.11.03.04.06.07.09.11.03.04.05.07.08.11.03.04.06.07.09.11.03.04.05.07.08.11h.005z"/>
+                                    </svg>
+                                    WhatsApp
+                                </a>
+                            </div>
+                        </div>
+
+                        {/* Centro: Slogan Spedizione Gratuita */}
+                        <p className="text-sm sm:text-lg font-semibold animate-pulse text-center flex-grow text-stone-950">
+                            🎉 SPEDIZIONE GRATUITA PER ORDINI SUPERIORI A €120! 🎉
+                        </p>
+
+                        {/* Sezione Destra: Pulsante Carrello */}
+                        <button
+                            onClick={() => {
+                                if (cartRef.current) {
+                                    cartRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }
+                            }}
+                            className="relative flex items-center gap-2 text-lg text-stone-950 hover:text-amber-200 transition-colors button-press-effect"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5zM3.132 4.072 4.88 11H13l1-5H4.372L3.132 4.072zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                            </svg>
+                            Carrello
+                            {calculateCartTotals.detailedCartItems.length > 0 && (
+                                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
+                                    {calculateCartTotals.detailedCartItems.length}
+                                </span>
+                            )}
+                        </button>
+                    </div>
+
+                    {/* Header Principale (Hero Section) */}
+                    <header className="relative w-full py-8 sm:py-12 bg-gradient-to-br from-amber-200 to-amber-50 shadow-lg mb-8">
+                        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between z-10 relative">
+                            {/* Sezione Sinistra: Info Negozio e Login Admin */}
+                            <div className="flex-grow flex flex-col items-start text-center sm:text-left">
+                                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-amber-800 leading-tight">💛 Oasi del Busatello</h1>
+                                <p className="text-lg sm:text-xl text-stone-700 mt-2 max-w-lg">
+                                    Il miele artigianale che porta la natura e l'eccellenza a casa tua.
+                                </p>
+                                {isAuthReady && currentUserId && (
+                                    <p className="text-xs text-stone-500 mt-1">
+                                        ID Sessione: <span className="font-mono">{currentUserId}</span>
+                                    </p>
+                                )}
+                                {/* Pulsante Login/Logout Admin */}
+                                {isAuthReady && (
+                                    <div className="mt-4">
+                                        {isAdmin ? (
+                                            <button
+                                                onClick={() => {
+                                                    // Usa window.firebase.signOut
+                                                    if (firebaseAuth && window.firebase) {
+                                                        window.firebase.signOut(firebaseAuth); 
+                                                        showNotification("Disconnessione Admin effettuata.", "success");
+                                                    }
+                                                }}
+                                                className="text-sm text-amber-700 hover:text-amber-900 font-semibold transition-colors button-press-effect"
+                                            >
+                                                Esci (Admin)
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => setShowAdminLoginModal(true)}
+                                                className="text-sm text-amber-700 hover:text-amber-900 font-semibold transition-colors button-press-effect"
+                                            >
+                                                Accedi come Admin
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Sezione Destra: "L'Italiano" */}
+                            <div className="flex-shrink-0 flex flex-col items-end mt-8 sm:mt-0 ml-auto text-right">
+                                <h2 
+                                    className="text-6xl sm:text-7xl lg:text-8xl font-black text-amber-900 flex flex-col items-end gap-2 text-3d-effect" /* Classe per l'animazione e effetto 3D */
+                                >
+                                    L'Italiano
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="60" height="40" viewBox="0 0 30 20">
+                                        <rect x="0" y="0" width="10" height="20" fill="green" />
+                                        <rect x="10" y="0" width="10" height="20" fill="white" />
+                                        <rect x="20" y="0" width="10" height="20" fill="red" />
+                                    </svg>
+                                </h2>
+                                <p className="text-2xl sm:text-3xl text-stone-800 italic mt-2">
+                                    I Mieli Artigianali
+                                </p>
+                            </div>
+                        </div>
+                    </header>
+
+
+                    {/* Contenuto principale: lista prodotti o dettaglio prodotto, e carrello */}
+                    <main className="max-w-7xl mx-auto px-4 pb-16 w-full flex-grow flex flex-col lg:flex-row gap-8">
+                            {/* Sezione sinistra: logica di rendering condizionale */}
+                            <section className="flex-1 space-y-8">
+                                {/* Se nessuna categoria o prodotto è selezionato, mostra la selezione categoria PRIMA */}
+                                {!selectedProductId && !selectedCategory && (
+                                    <CategorySelection onSelectCategory={setSelectedCategory} />
+                                )}
+
+                                {/* Sezione: Il Cuore del Nostro Miele Artigianale (SOLO se nessuna categoria o prodotto è selezionato, e DOPO la selezione categoria) */}
+                                {!selectedProductId && !selectedCategory && (
+                                    <section className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 mt-6 mb-6"> {/* Rimosso bg, shadow, border, ridotto padding */}
+                                        <div className="max-w-4xl mx-auto text-center">
+                                            <h2 className="text-4xl font-extrabold text-amber-800 mb-6 sm:text-5xl lg:text-6xl">Il Cuore del Nostro Miele Artigianale</h2>
+
+                                            <p className="text-lg leading-relaxed text-stone-700 mb-8 sm:text-xl">
+                                                All'Oasi del Busatello, il miele è pura passione. I nostri mieli nascono nella <strong className="font-semibold text-amber-700">Valle delle Regine</strong>, un'area incontaminata all'interno della stessa Oasi del Busatello, dove le api prosperano nel rispetto della natura.
+                                            </p>
+                                            <p className="text-lg leading-relaxed text-stone-700 mb-10 sm:text-xl">
+                                                Offriamo un prodotto autentico, frutto del loro instancabile lavoro e del nostro profondo rispetto per la natura italiana.
+                                            </p>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left mt-12">
+                                                <div className="bg-white p-6 rounded-lg shadow-md border border-stone-300 reveal-up is-visible"> {/* Aggiunto is-visible */}
+                                                    <h3 className="text-2xl font-bold text-amber-600 mb-3">100% Naturale</h3>
+                                                    <p className="text-stone-700">Raccolto con cura nella Valle delle Regine, senza aggiunte. Solo la pura bontà che la natura ci offre.</p>
+                                                </div>
+                                                <div className="bg-white p-6 rounded-lg shadow-md border border-stone-300 reveal-up is-visible" style={{transitionDelay: '0.1s'}}> {/* Aggiunto is-visible */}
+                                                    <h3 className="text-2xl font-bold text-amber-600 mb-3">Sapore Vero</h3>
+                                                    <p className="text-stone-700">Ogni vasetto è un viaggio sensoriale nei sapori unici dei fiori italiani di questa valle speciale.</p>
+                                                </div>
+                                                <div className="bg-white p-6 rounded-lg shadow-md border border-stone-300 reveal-up is-visible" style={{transitionDelay: '0.2s'}}> {/* Aggiunto is-visible */}
+                                                    <h3 className="text-2xl font-bold text-amber-600 mb-3">Maestria Artigianale</h3>
+                                                    <p className="text-stone-700">La nostra dedizione e l'esperienza tramandata garantiscono una qualità superiore, con la cura di un prodotto fatto a mano.</p>
+                                                </div>
+                                                <div className="bg-white p-6 rounded-lg shadow-md border border-stone-300 reveal-up is-visible" style={{transitionDelay: '0.3s'}}> {/* Aggiunto is-visible */}
+                                                    <h3 className="text-2xl font-bold text-amber-600 mb-3">Orgoglio Italiano</h3>
+                                                    <p className="text-stone-700">Portiamo direttamente a casa tua il meglio della tradizione apistica, con l'autenticità del nostro territorio.</p>
+                                                </div>
+                                            </div>
+
+                                            <p className="text-xl font-semibold text-amber-800 mt-12">
+                                                Scegli l'Oasi del Busatello: scegli la qualità, la tradizione e il sapore autentico d'Italia, dalla Valle delle Regine.
+                                            </p>
+                                        </div>
+                                    </section>
+                                )}
+
+                                {/* Se una categoria è selezionata ma nessun prodotto specifico, mostra i prodotti di quella categoria */}
+                                {selectedCategory && !selectedProductId && (
+                                    <>
+                                        <button
+                                            onClick={() => setSelectedCategory(null)} // Torna alla selezione categoria
+                                            className="rounded-xl bg-stone-200 hover:bg-stone-300 text-stone-800 font-semibold px-4 py-2 transition-colors flex items-center gap-2 mb-4 button-press-effect"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                            </svg>
+                                            Torna alle Categorie
+                                        </button>
+                                        <h2 className="text-3xl font-bold text-stone-800 mb-6">
+                                            Mieli {selectedCategory === 'busatello' ? 'Artigianali del Busatello' : 'Prelibati'}:
+                                        </h2>
+                                        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                                            {products.filter(p => p.category === selectedCategory).length === 0 ? (
+                                                <p className="col-span-full text-center text-red-500 italic py-8">Nessun prodotto disponibile in questa categoria.</p>
+                                            ) : (
+                                                products.filter(p => p.category === selectedCategory).sort((a,b) => a.order - b.order).map(product => ( // Aggiunto sort per l'ordine
+                                                    <ProductCard
+                                                        key={product.id}
+                                                        product={product}
+                                                        onProductClick={setSelectedProductId}
+                                                    />
+                                                ))
+                                            )}
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Se un prodotto specifico è selezionato, mostra la pagina di dettaglio */}
+                                {selectedProductId && (
+                                    <ProductDetailPage
+                                        product={products.find(p => p.id === selectedProductId)}
+                                        onAddToCart={addToCart}
+                                        fmt={fmt}
+                                        onManualStockUpdate={updateProductStockInFirestore}
+                                        onAddStockDelta={addProductStockDelta}
+                                        isAdmin={isAdmin}
+                                        onBack={() => setSelectedProductId(null)} // Torna alla lista categorie
+                                    />
+                                )}
+                            </section>
+
+                            {/* Sezione destra: carrello e dettagli spedizione/pagamento (sempre visibili) */}
+                            <aside className="lg:w-1/3 space-y-8 lg:sticky lg:top-8 lg:h-fit"> {/* Aggiunto sticky per il carrello */}
+                                {/* Carrello */}
+                                <ShoppingCartDisplay
+                                    calculateCartTotals={calculateCartTotals}
+                                    updateCartItemQuantity={updateCartItemQuantity}
+                                    removeFromCart={removeFromCart}
+                                    fmt={fmt}
+                                    onProceedToCheckout={scrollToCheckout}
+                                    cartRef={cartRef}
+                                />
+
+                                {/* Dettagli spedizione e metodi di contatto */}
+                                <div ref={checkoutRef} className="bg-white/70 backdrop-blur-lg rounded-2xl border border-amber-200 shadow-xl p-6 space-y-4">
+                                    <h3 className="text-xl font-bold text-amber-700 mb-4">Finalizza il tuo Ordine</h3>
+                                    <p className="text-sm text-stone-600 mb-4">Compila i dati per la spedizione e scegli come inviare l'ordine.</p>
+                                    <input
+                                        placeholder="Nome e cognome"
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                        className="w-full rounded-xl border border-stone-300 px-4 py-2 focus:ring-amber-500 focus:border-amber-500 transition"
+                                        required
+                                    />
+                                    <input
+                                        placeholder="Email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="w-full rounded-xl border border-stone-300 px-4 py-2 focus:ring-amber-500 focus:border-amber-500 transition"
+                                        type="email"
+                                        required
+                                    />
+                                    <input
+                                        placeholder="Telefono"
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                        className="w-full rounded-xl border border-stone-300 px-4 py-2 focus:ring-amber-500 focus:border-amber-500 transition"
+                                        type="tel"
+                                        required
+                                    />
+                                    <input
+                                        placeholder="Indirizzo e n° civico"
+                                        value={address}
+                                        onChange={(e) => setAddress(e.target.value)}
+                                        className="w-full rounded-xl border border-stone-300 px-4 py-2 focus:ring-amber-500 focus:border-amber-500 transition"
+                                        required
+                                    />
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <input
+                                            placeholder="Città"
+                                            value={city}
+                                            onChange={(e) => setCity(e.target.value)}
+                                            className="rounded-xl border border-stone-300 px-4 py-2 focus:ring-amber-500 focus:border-amber-500 transition"
+                                            required
+                                        />
+                                        <input
+                                            placeholder="CAP"
+                                            value={cap}
+                                            onChange={(e) => setCap(e.target.value)}
+                                            className="rounded-xl border border-stone-300 px-4 py-2 focus:ring-amber-500 focus:border-amber-500 transition"
+                                            type="text" // Usato 'text' per flessibilità (es. CAP esteri con lettere)
+                                            maxLength={5}
+                                            required
+                                        />
+                                    </div>
+                                    <textarea
+                                        placeholder="Note per il corriere (facoltative)"
+                                        value={notes}
+                                        onChange={(e) => setNotes(e.target.value)}
+                                        className="w-full rounded-xl border border-stone-300 px-4 py-2 focus:ring-amber-500 focus:border-amber-500 transition"
+                                        rows="3"
+                                    ></textarea>
+
+                                    {/* Pulsanti per l'invio dell'ordine */}
+                                    <div className="pt-4 grid gap-3">
+                                        <button
+                                            onClick={() => saveOrderToFirestore("WhatsApp")}
+                                            disabled={isSavingOrder || !isAuthReady || calculateCartTotals.detailedCartItems.length === 0 || !areCustomerDetailsValid()}
+                                            className={`w-full text-center rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 shadow-md hover:shadow-lg transition-all duration-200 transform button-press-effect ${isSavingOrder || !isAuthReady || calculateCartTotals.detailedCartItems.length === 0 || !areCustomerDetailsValid() ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
+                                        >
+                                            {isSavingOrder ? (
+                                                'Salvataggio...'
+                                            ) : (
+                                                <>
+                                                    <span className="inline-block mr-2 text-xl align-middle">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16">
+                                                            <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.334.068 7.468c0 1.76.711 3.328 1.95 4.572l-.766 2.455 2.51-.775A7.818 7.818 0 0 0 7.994 16h.005c4.366 0 7.923-3.334 7.923-7.468 0-1.76-.711-3.328-1.95-4.572zm-1.892 6.643c-.15.073-.173.176-.432.417-.23.23-.509.554-.693.666-.183.111-.367.167-.55.056-.184-.111-.61-.222-.843-.333-.234-.112-.39-.168-.55-.111-.15.056-.473.222-.61.389-.136.167-.27.367-.38.523-.11.156-.22.28-.36.333-.14.056-.273.04-.41-.018-.135-.056-.326-.111-.472-.194-.145-.083-.3-.21-.44-.36-.14-.15-.27-.33-.36-.48-.09-.15-.018-.14-.14-.24-.12-.09-.27-.21-.41-.33-.14-.11-.27-.22-.38-.28-.11-.056-.22-.04-.3-.02-.08.018-.2.083-.3.14-.1.056-.22.167-.3.222-.08.056-.16.083-.22.111-.056.02-.11.02-.17.02-.056 0-.11-.005-.16-.005-.056 0-.083.01-.11.056-.03.04-.1.14-.3.31-.2.2-.4.36-.55.44-.15.083-.3.111-.47.167-.17.056-.34.083-.5.083-.17 0-.3-.005-.4-.056-.1-.056-.24-.22-.61-.75-.37-.53-.61-.666-.69-.711-.08-.056-.17-.04-.25-.04-.08 0-.17-.005-.25.04s-.17.111-.25.222c-.08.111-.22.28-.3.36-.08.083-.17.14-.2.167-.03.02-.06.03-.11.03-.056 0-.109-.005-.167-.056-.055-.056-.11-.111-.166-.194-.05-.08-.11-.14-.16-.22-.05-.08-.11-.14-.16-.2-.05-.056-.01-.11-.04-.17-.03-.055-.07-.12-.1-.17-.04-.055-.06-.1-.09-.17-.03-.056-.01-.1-.056-.14-.04-.04-.07-.07-.11-.111-.04-.04-.05-.07-.08-.1-.02-.03-.06-.05-.09-.08-.03-.02-.05-.05-.08-.06-.03-.012-.05-.02-.08-.02zm.12-5.41c.14.056.28.111.41.167.14.056.28.111.41.167.14.056.28.111.41.167s.26.111.41.167s.28.111.41.167s.26.111.41.167h.005zm-.12 1.48c.03.04.05.07.08.11.03.04.06.07.09.11.03.04.05.07.08.11.03.04.06.07.09.11.03.04.05.07.08.11.03.04.06.07.09.11.03.04.05.07.08.11h.005zm-.12 1.48c.03.04.05.07.08.11.03.04.06.07.09.11.03.04.05.07.08.11.03.04.06.07.09.11.03.04.05.07.08.11.03.04.06.07.09.11.03.04.05.07.08.11h.005zm-.12 1.48c.03.04.05.07.08.11.03.04.06.07.09.11.03.04.05.07.08.11.03.04.06.07.09.11.03.04.05.07.08.11.03.04.06.07.09.11.03.04.05.07.08.11h.005z"/>
+                                                    </svg>
+                                                </span>
+                                                Invia ordine via WhatsApp
+                                            </>
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={() => saveOrderToFirestore("Email")}
+                                        disabled={isSavingOrder || !isAuthReady || calculateCartTotals.detailedCartItems.length === 0 || !areCustomerDetailsValid()}
+                                        className={`w-full text-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 shadow-md hover:shadow-lg transition-all duration-200 transform button-press-effect ${isSavingOrder || !isAuthReady || calculateCartTotals.detailedCartItems.length === 0 || !areCustomerDetailsValid() ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
+                                    >
+                                        {isSavingOrder ? (
+                                            'Salvataggio...'
+                                        ) : (
+                                            <>
+                                                <span className="inline-block mr-2 text-xl align-middle">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16">
+                                                        <path d="M.05 3.555A2 2 0 0 1 2 2h12a2 2 0 0 1 1.95 1.555L8 8.414.05 3.555ZM0 4.697v7.104l5.803-3.558L0 4.697ZM6.761 8.83l-6.57 4.027A2 2 0 0 0 2 14h12a2 2 0 0 0 1.808-1.144l-6.57-4.027L8 9.586l-1.239-.756Zm6.57 4.027L16 11.801V4.697l-5.803 3.558 5.803 3.559Z"/>
+                                                    </svg>
+                                                </span>
+                                                Invia ordine via Email
+                                            </>
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={handleStripePayment} // Chiamerà la nuova funzione Stripe
+                                        disabled={isSavingOrder || !isAuthReady || calculateCartTotals.detailedCartItems.length === 0 || !areCustomerDetailsValid()}
+                                        className={`w-full text-center rounded-xl bg-stone-700 hover:bg-stone-800 text-white font-semibold px-6 py-3 shadow-md hover:shadow-lg transition-all duration-200 transform button-press-effect ${isSavingOrder || !isAuthReady || calculateCartTotals.detailedCartItems.length === 0 || !areCustomerDetailsValid() ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
+                                    >
+                                        {isSavingOrder ? (
+                                            'Vai al pagamento...'
+                                        ) : (
+                                            <>
+                                                <span className="inline-block mr-2 text-xl align-middle">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16">
+                                                        <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm2-1a1 1 0 0 0-1 1v.914H15V4a1 1 0 0 0-1-1H2zm13 8.862V4.929H1v6.933A1 1 0 0 0 2 13h12a1 1 0 0 0 1-1.138zM11 5.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1z"/>
+                                                    </svg>
+                                                </span>
+                                                Paga con carta
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </aside>
+                    </main>
+
+                    {/* Notifiche */}
+                    {notificationMsg && (
+                        <div ref={notificationRef} className={`fixed bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl shadow-lg z-50 text-white font-semibold text-center animate-slide-in-up ${
+                            notificationType === "success" ? "bg-lime-600" : "bg-red-600"
+                        }`}>
+                            {notificationMsg}
+                        </div>
+                    )}
+
+                    {/* Modale Login Admin */}
+                    {showAdminLoginModal && (
+                        <LoginScreen firebaseAuth={firebaseAuth} showNotification={showNotification} onClose={() => setShowAdminLoginModal(false)} />
+                    )}
+                    {/* Il PaymentDemoModal è stato rimosso */}
+
+                    {/* Footer */}
+                    <footer className="w-full bg-stone-800 text-stone-300 py-6 mt-auto">
+                        <div className="max-w-7xl mx-auto px-4 text-center text-sm">
+                            <p>&copy; {new Date().getFullYear()} Oasi del Busatello – Miele Artigianale. Tutti i diritti riservati.</p>
+                            <p className="mt-2">
+                                Contatti: <a href={`mailto:${sellerEmail}`} className="text-lime-400 hover:text-lime-300 transition-colors">{sellerEmail}</a> | Tel: <a href={`tel:${sellerPhone}`} className="text-lime-400 hover:text-lime-300 transition-colors">{sellerPhone}</a>
+                            </p>
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+
+        // Renderizza il componente principale nell'elemento root del DOM
+        // Aggiornato a ReactDOM.createRoot per compatibilità con React 18
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<HoneyShop />);
+    </script>
+
+<script>
+// ===== Reveal on scroll (IntersectionObserver) =====
+(function(){
+  const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (prefersReduced) return;
+
+  const targets = new Set();
+
+  // Heuristics: mark common content blocks if not already marked
+  function autoMark(){
+    const candidates = document.querySelectorAll([
+      '.rounded-2xl.border',          // most cards/panels
+      '.shadow-xl',                   // panels
+      'header .rounded-2xl',          // header card
+      '#root [className*="grid"] > *'     // grid children
+    ].join(','));
+    candidates.forEach(el => {
+      if (!el.classList.contains('reveal-up') && !el.classList.contains('reveal-fade')) {
+        el.classList.add('reveal-up');
+      }
+      targets.add(el);
+    });
+  }
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add('is-visible');
+    });
+  }, { rootMargin: '0px 0px -10% 0px', threshold: .1 });
+
+  function observeAll(){
+    targets.forEach(t => io.observe(t));
+  }
+
+  autoMark();
+  observeAll();
+
+  // Observe mutations to handle React renders (product detail/cart updates)
+  const mo = new MutationObserver(() => {
+    autoMark();
+    observeAll();
+  });
+  mo.observe(document.getElementById('root'), { childList:true, subtree:true });
+})();
+
+// ===== Mouse parallax for background (updates CSS vars --mx/--my) =====
+(function(){
+  const root = document.documentElement;
+  let raf = null;
+  function onMove(e){
+    const x = (e.clientX / window.innerWidth) * 100;
+    const y = (e.clientY / window.innerHeight) * 100;
+    if (raf) cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => {
+      root.style.setProperty('--mx', x + '%');
+      root.style.setProperty('--my', y + '%');
+    });
+  }
+  window.addEventListener('mousemove', onMove, { passive:true });
+})();
+</script>
+
+<script>
+// Questo è lo script che gestiva i pulsanti di pagamento originali
+// del tuo tema HTML. Se il tuo carrello React gestisce già il pagamento,
+// questo blocco potrebbe essere superfluo o causare conflitti se i selettori
+// dei bottoni si sovrappongono.
+// L'errore "Failed to fetch" era probabilmente causato dall'URL hardcoded /api/checkout qui.
+// Ora, il pulsante "Paga con carta" è gestito dalla logica React (handleStripePayment).
+// Per evitare conflitti o reindirizzamenti indesiderati, ho rimosso la logica
+// di attacco eventi da questo blocco, lasciandolo come commento se volessi
+// riutilizzarlo per altri scopi.
+/*
+(function () {
+  const CANDIDATE_SELECTORS = [
+    '[data-checkout]','#paga-btn','#paga','.paga','.pay','.checkout','.btn-checkout','button[name="pay"]','button[type="submit"].pay'
+  ];
+  function attach(el) {
+    if (!el) return;
+    el.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const originalText = (el.textContent || '').trim();
+      el.disabled = true;
+      if (originalText) el.textContent = 'Reindirizzo…';
+      try {
+        // ATTENZIONE: Questo URL era il problema originale.
+        // La logica di pagamento è ora gestita dal componente React.
+        // const res = await fetch('/api/create-checkout-session', { // L'URL era sbagliato, ma ora non viene più usato da qui
+        //   method: 'POST',
+        //   headers: { 'Content-Type': 'application/json' }
+        // });
+        // const data = await res.json();
+        // if (!res.ok || !data || !data.url) throw new Error((data && (data.error || data.message)) || 'Sessione non valida');
+        // window.location.href = data.url;
+      } catch (err) {
+        alert('Non sono riuscito ad avviare il pagamento: ' + err.message);
+        el.disabled = false;
+        if (originalText) el.textContent = originalText;
+      }
+    }, { passive: false });
+  }
+  for (const sel of CANDIDATE_SELECTORS) {
+    const btn = document.querySelector(sel);
+    if (btn) {
+      // attach(btn); // Ho commentato l'attacco per evitare duplicati con React
+      // return;
+    }
+  }
+  // console.warn('Nessun pulsante di pagamento trovato. Aggiungi data-checkout o id="paga-btn".'); // Questo warning potrebbe apparire se i bottoni del tema originale non sono presenti
+})();
+*/
+</script>
+</body>
+</html>
