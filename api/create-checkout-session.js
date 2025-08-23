@@ -8,43 +8,29 @@ export default async function handler(req, res) {
     }
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || req.headers.origin || `https://${req.headers.host}`;
 
-    // Se arrivano item dal frontend li uso, altrimenti metto un prodotto di test
-    let line_items = [];
-    if (req.body && Array.isArray(req.body.items) && req.body.items.length > 0) {
-      line_items = req.body.items.map((it) => ({
-        price_data: {
-          currency: 'eur',
-          product_data: { name: it.name || 'Prodotto' },
-          // it.amount è in euro → converto in centesimi
-          unit_amount: Math.round((it.amount ?? 0) * 100),
-        },
-        quantity: it.quantity ?? 1,
-      }));
-    } else {
-      // Fallback di test
-      line_items = [
-        {
-          price_data: {
-            currency: 'eur',
-            product_data: { name: 'Prodotto di test' },
-            unit_amount: 100, // 1,00 €
-          },
-          quantity: 1,
-        },
-      ];
+    // ✅ PRETENDO i prodotti reali dal frontend
+    const { items = [] } = req.body;
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'No items provided' });
     }
 
-    // Calcolo origin per i redirect (funziona su Vercel e in locale)
-    const origin = req.headers.origin || `https://${req.headers.host}`;
+    // items: [{ name, amount, quantity }] con amount in EURO → converto in cent
+    const line_items = items.map((it) => ({
+      price_data: {
+        currency: 'eur',
+        product_data: { name: String(it.name || 'Prodotto') },
+        unit_amount: Math.round(Number(it.amount) * 100), // 6.00 € → 600
+      },
+      quantity: Number(it.quantity || 1),
+    }));
 
-    // CREAZIONE SESSIONE CHECKOUT
+    // ✅ (Step 1 già fatto) Raccogli indirizzo + telefono su Stripe Checkout
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
       line_items,
-
-      // 👇 STEP 1: attivo raccolta INDIRIZZO + TELEFONO
       billing_address_collection: 'required',
       phone_number_collection: { enabled: true },
       shipping_address_collection: { allowed_countries: ['IT'] },
@@ -54,7 +40,6 @@ export default async function handler(req, res) {
       cancel_url: `${origin}/cancel.html`,
     });
 
-    // Risposta al frontend (mantengo id per compatibilità; aggiungo url se ti serve)
     return res.status(200).json({ id: session.id, url: session.url });
   } catch (err) {
     console.error('Stripe create session error:', err);
