@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     const rawItems = (req.body && Array.isArray(req.body.items)) ? req.body.items : [];
 
     // Se non ci sono articoli reali, usa un articolo di test come fallback
-    // Non filtriamo più la spedizione qui, perché il frontend la gestisce correttamente.
+    // NON FILTRIAMO PIÙ LA SPEDIZIONE QUI. Il frontend la gestisce correttamente come un line_item.
     const itemsToProcess = rawItems.length === 0
       ? [{ name: 'Prodotto di test (fallback)', amount: 1, quantity: 1 }]
       : rawItems;
@@ -31,15 +31,16 @@ export default async function handler(req, res) {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
-      line_items, // Ora include la spedizione inviata dal frontend
+      line_items, // Ora include la spedizione inviata dal frontend dal frontend
 
       // Raccogli indirizzo e telefono
       billing_address_collection: 'required',
       phone_number_collection: { enabled: true },
       shipping_address_collection: { allowed_countries: ['IT'] },
 
-      // IMPORTANTISSIMO: Rimuoviamo le shipping_options fisse dal backend.
+      // IMPORTANTISSIMO: RIMUOVIAAMO COMPLETAMENTE LE shipping_options fisse dal backend.
       // La spedizione è già inclusa come line_item dal frontend.
+      // Le abbiamo commentate in precedenza, ora è essenziale che NON ci siano del tutto per evitare conflitti.
       // shipping_options: [
       //   {
       //     shipping_rate_data: {
@@ -55,7 +56,6 @@ export default async function handler(req, res) {
       // ],
 
       // URL di redirect dopo successo/cancellazione del pagamento
-      // Assicurati che questi URL puntino al tuo dominio Vercel effettivo
       success_url: `${req.headers.origin}/success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  `${req.headers.origin}/cancel.html`,
 
