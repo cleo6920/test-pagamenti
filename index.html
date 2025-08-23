@@ -2009,5 +2009,28 @@ const updateProductStockInFirestore = useCallback(async (productId, newStockValu
 })();
 */
 </script>
+<script>
+(() => {
+  const ENDPOINT = "https://test-pagamenti.vercel.app/api/checkout-redirect";
+  function go() {
+    const f = document.createElement('form');
+    f.method = 'POST';
+    f.action = ENDPOINT;        // l'API fa redirect 303 → Stripe
+    document.body.appendChild(f);
+    f.submit();
+  }
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('button, a');
+    if (!btn) return;
+    const label = (btn.textContent || '').trim().toLowerCase();
+    if (label.includes('paga con carta')) {
+      e.preventDefault();
+      e.stopPropagation();
+      go();
+    }
+  });
+})();
+</script>
+
 </body>
 </html>
