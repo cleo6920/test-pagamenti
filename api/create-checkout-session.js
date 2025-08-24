@@ -1,4 +1,5 @@
-// /api/create-checkout-session.js — Carta in primo piano, Link/Amazon opzionali, prefill telefono (no email)
+// /api/create-checkout-session.js — Carta in primo piano, Link/Amazon opzionali,
+// prefill: nome, indirizzo, telefono e PROVINCIA (state)
 import Stripe from 'stripe';
 
 export default async function handler(req, res) {
@@ -11,12 +12,43 @@ export default async function handler(req, res) {
 
     const {
       items = [],
-      customer: customerInput = {}, // { name, email, phone, address:{line1,postal_code,city,state,country}, note }
-      shippingCostOverride = 0,     // es. 6 (euro)
+      customer: customerInput = {}, // { name, email, phone, address:{line1,postal_code,city,state|province|prov|provincia,country}, note }
+      shippingCostOverride = 0,
       success_url,
       cancel_url,
       metadata = {},
     } = req.body || {};
+
+    // --- helper: normalizza la provincia in codice a 2 lettere quando possibile ---
+    const normalizeProvince = (val) => {
+      if (!val) return undefined;
+      const raw = String(val).trim();
+      if (!raw) return undefined;
+      if (raw.length === 2) return raw.toUpperCase();
+
+      // mapping essenziale (aggiungi se ti servono altre province)
+      const map = {
+        'mantova': 'MN',
+        'verona': 'VR',
+        'modena': 'MO',
+        'ferrara': 'FE',
+        'rovigo': 'RO',
+        'milano': 'MI',
+        'brescia': 'BS',
+        'parma': 'PR',
+        'reggio emilia': 'RE',
+        'bergamo': 'BG',
+        'bologna': 'BO',
+        'padova': 'PD',
+        'vicenza': 'VI',
+        'trento': 'TN',
+        'bolzano': 'BZ',
+        'cremona': 'CR',
+        'piacenza': 'PC',
+      };
+      const k = raw.toLowerCase();
+      return map[k] || raw.toUpperCase();
+    };
 
     // --- LINE ITEMS (accetta price "price_..." o price_data in euro) ---
     const baseItems = items.length ? items : [{
@@ -50,27 +82,29 @@ export default async function handler(req, res) {
       },
     }];
 
-    // --- CUSTOMER per prefill (NO email, SI telefono) ---
+    // --- CUSTOMER per prefill (NO email per non attivare Link, SI telefono e provincia) ---
     const name  = (customerInput.name  || '').trim() || undefined;
-    const phone = (customerInput.phone || '').trim() || undefined; // <- vogliamo precompilarlo
+    const phone = (customerInput.phone || '').trim() || undefined; // prefill telefono
     const note  = (customerInput.note  || '').trim() || undefined;
     const emailHint = (customerInput.email || '').trim().toLowerCase() || undefined; // solo metadato, NON prefill
 
     const addr = customerInput.address || {};
+    const provinceInput = addr.state || addr.province || addr.prov || addr.provincia || '';
+    const province = normalizeProvince(provinceInput);
+
     const addressForStripe = {
       line1: addr.line1 || undefined,
       line2: addr.line2 || undefined,
       postal_code: addr.postal_code || addr.cap || undefined,
       city: addr.city || undefined,
-      state: addr.state || undefined,
+      state: province || undefined,            // <- PROVINCIA normalizzata
       country: (addr.country || 'IT').toUpperCase(),
     };
 
-    // Creiamo un customer “pulito” senza email, ma con phone per prefill
+    // Crea un customer senza email (così Link non parte da solo), con telefono e provincia
     const createdCustomer = await stripe.customers.create({
-      // email: (omessa apposta per non attivare Link)
       name,
-      phone,                         // <- prefill telefono
+      phone,
       address: addressForStripe,
       shipping: (name || addressForStripe.line1)
         ? { name: name || undefined, phone: phone || undefined, address: addressForStripe }
@@ -87,15 +121,15 @@ export default async function handler(req, res) {
       req.headers.origin
       || (req.headers.host ? `https://${req.headers.host}` : 'http://localhost:3000');
 
-    // --- Parametri sessione: carta in primo piano, Link/Amazon abilitati ma non “dominanti” ---
+    // --- Parametri sessione: carta in primo piano, Link/Amazon come opzione ---
     const sessionParams = {
       mode: 'payment',
       line_items,
 
-      payment_method_types: ['card', 'link', 'amazon_pay'], // wallet visibili, ma niente login automatico
+      payment_method_types: ['card', 'link', 'amazon_pay'],
 
       billing_address_collection: 'required',
-      phone_number_collection: { enabled: true }, // mostra/edit del telefono nel form
+      phone_number_collection: { enabled: true },
       shipping_address_collection: { allowed_countries: ['IT', 'SM', 'VA'] },
       shipping_options: shippingOptions,
 
@@ -111,15 +145,14 @@ export default async function handler(req, res) {
         address_line1_initial: addr.line1 || '',
         city_initial: addr.city || '',
         cap_initial: addr.postal_code || addr.cap || '',
+        province_initial: province || '',
         note: note || '',
         ...metadata,
       },
 
-      // Prefill tramite customer + aggiornamento automatico se l’utente cambia dati
       customer: customerId,
       customer_update: { address: 'auto', name: 'auto', shipping: 'auto' },
-
-      // IMPORTANTISSIMO: niente customer_email qui (per non attivare Link)
+      // niente customer_email qui
     };
 
     const session = await stripe.checkout.sessions.create(sessionParams);
