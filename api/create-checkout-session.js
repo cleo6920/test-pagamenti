@@ -1,5 +1,11 @@
-// /api/create-checkout-session.js — Carta in primo piano, Link/Amazon opzionali
-// Prefill: nome, telefono, indirizzo; provincia dedotta da state/province o CAP/città; NO email (evita Link auto)
+// /api/create-checkout-session.js
+// Focus: CAP ↔︎ Città ↔︎ Provincia (deduce e valida), NO prodotto di test
+// - Niente email prefill (così Link non parte da solo)
+// - Carta in primo piano; Link/Amazon opzionali (lasciamo a Stripe i metodi disponibili)
+// - Se items mancano → 400 MISSING_ITEMS
+// - Se CAP non è 5 cifre (IT) → 422 INVALID_CAP
+// - Se CAP e Città portano a province diverse (IT) → 422 ADDRESS_MISMATCH
+// - Deduciamo provincia da state/province esplicita, altrimenti da CAP (5→4→3) o da Città
 import Stripe from 'stripe';
 
 export default async function handler(req, res) {
@@ -11,22 +17,29 @@ export default async function handler(req, res) {
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
     const {
-      items = [],
-      customer: customerInput = {}, // { name, email, phone, address:{line1,postal_code,city,state|province|prov|provincia,country}, note }
+      items,
+      customer: customerInput = {}, // { name, email, phone, address:{line1,postal_code,cap,city,state|province|prov|provincia,country}, note }
       shippingCostOverride = 0,
       success_url,
       cancel_url,
       metadata = {},
     } = req.body || {};
 
-    // ---------- Utils: normalizza e deduce provincia ----------
+    // ---------- Items obbligatori (niente prodotto di test) ----------
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        error: 'Items mancanti: passa almeno una riga carrello.',
+        code: 'MISSING_ITEMS',
+      });
+    }
+
+    // ---------- Utils ----------
     const normalizeProvince = (val) => {
       if (!val) return undefined;
       const raw = String(val).trim();
       if (!raw) return undefined;
       if (raw.length === 2) return raw.toUpperCase();
       const map = {
-        // capoluoghi / comuni frequenti (aggiungi pure altri se ti servono)
         'mantova':'MN','verona':'VR','modena':'MO','ferrara':'FE','rovigo':'RO',
         'milano':'MI','monza e della brianza':'MB','monza':'MB','brescia':'BS',
         'parma':'PR','reggio emilia':'RE','bergamo':'BG','bologna':'BO',
@@ -54,7 +67,7 @@ export default async function handler(req, res) {
       return map[k] || raw.toUpperCase();
     };
 
-    // deduzione da CAP (5→4→3 cifre) o città — copertura ampia Italia
+    // deduzione provincia da CAP (5→4→3 cifre) o città (copertura ampia Italia)
     const inferProvinceFromAddress = ({ postal_code, city }) => {
       const prefixMap = {
         // Piemonte / VdA / Liguria
@@ -82,7 +95,7 @@ export default async function handler(req, res) {
         // Campania
         '800':'NA','801':'NA','810':'CE','820':'BN','830':'AV','840':'SA',
         // Puglia / Basilicata
-        '700':'BA','701':'BA','710':'FG','720':'BR','730':'LE','740':'TA','750':'MT','760':'BT','851':'PZ','850':'PZ',
+        '700':'BA','701':'BA','710':'FG','720':'BR','730':'LE','740':'TA','750':'MT','760':'BT','850':'PZ','851':'PZ',
         // Calabria
         '870':'CS','871':'CS','880':'CZ','889':'KR','890':'RC','899':'VV',
         // Sicilia
@@ -90,60 +103,68 @@ export default async function handler(req, res) {
         // Sardegna
         '070':'SS','071':'SS','080':'NU','090':'CA','091':'CA','092':'SU','09070':'OR'
       };
+
+      let fromCap;
       if (postal_code) {
-        const pc = String(postal_code);
+        const pc = String(postal_code).trim();
         for (const n of [5,4,3]) {
           const p = pc.slice(0, n);
-          if (prefixMap[p]) return prefixMap[p];
+          if (prefixMap[p]) { fromCap = prefixMap[p]; break; }
         }
       }
-      const cityMap = {
-        'san giovanni del dosso':'MN','poggio rusco':'MN','sermide':'MN','felonica':'MN','mantova':'MN',
-        'mirandola':'MO','modena':'MO','carpi':'MO',
-        'verona':'VR','rovigo':'RO','ferrara':'FE','bologna':'BO','parma':'PR','reggio emilia':'RE','ravenna':'RA',
-        'padova':'PD','vicenza':'VI','treviso':'TV','venezia':'VE','belluno':'BL',
-        'trento':'TN','bolzano':'BZ',
-        'milano':'MI','monza':'MB','brescia':'BS','bergamo':'BG','cremona':'CR','pavia':'PV','lodi':'LO','lecco':'LC','como':'CO','sondrio':'SO','varese':'VA',
-        'alpignano':'TO','torino':'TO','rivoli':'TO','collegno':'TO','pianezza':'TO',
-        'genova':'GE','savona':'SV','imperia':'IM','la spezia':'SP',
-        'firenze':'FI','prato':'PO','pistoia':'PT','lucca':'LU','pisa':'PI','livorno':'LI','arezzo':'AR','siena':'SI','grosseto':'GR','massa':'MS',
-        'ancona':'AN','pesaro':'PU','urbino':'PU','macerata':'MC','ascoli piceno':'AP','fermo':'FM',
-        'terni':'TR','perugia':'PG',
-        'roma':'RM','rieti':'RI','viterbo':'VT','latina':'LT','frosinone':'FR',
-        'pescara':'PE','teramo':'TE','chieti':'CH','l aquila':'AQ',
-        'napoli':'NA','salerno':'SA','caserta':'CE','benevento':'BN','avellino':'AV',
-        'bari':'BA','barletta':'BT','andria':'BT','trani':'BT','brindisi':'BR','lecce':'LE','taranto':'TA','foggia':'FG',
-        'campobasso':'CB','isernia':'IS',
-        'catanzaro':'CZ','cosenza':'CS','crotone':'KR','reggio calabria':'RC','vibo valentia':'VV',
-        'palermo':'PA','trapani':'TP','agrigento':'AG','caltanissetta':'CL','enna':'EN','catania':'CT','messina':'ME','ragusa':'RG','siracusa':'SR',
-        'cagliari':'CA','sassari':'SS','nuoro':'NU','oristano':'OR','carbonia':'SU','iglesias':'SU'
-      };
+
+      let fromCity;
       if (city) {
+        const cityMap = {
+          // zona utente + principali capoluoghi
+          'san giovanni del dosso':'MN','poggio rusco':'MN','sermide':'MN','felonica':'MN','mantova':'MN',
+          'mirandola':'MO','modena':'MO','carpi':'MO',
+          'verona':'VR','rovigo':'RO','ferrara':'FE','bologna':'BO','parma':'PR','reggio emilia':'RE','ravenna':'RA',
+          'padova':'PD','vicenza':'VI','treviso':'TV','venezia':'VE','belluno':'BL',
+          'trento':'TN','bolzano':'BZ',
+          'milano':'MI','monza':'MB','brescia':'BS','bergamo':'BG','cremona':'CR','pavia':'PV','lodi':'LO','lecco':'LC','como':'CO','sondrio':'SO','varese':'VA',
+          'alpignano':'TO','torino':'TO','rivoli':'TO','collegno':'TO','pianezza':'TO',
+          'genova':'GE','savona':'SV','imperia':'IM','la spezia':'SP',
+          'firenze':'FI','prato':'PO','pistoia':'PT','lucca':'LU','pisa':'PI','livorno':'LI','arezzo':'AR','siena':'SI','grosseto':'GR','massa':'MS',
+          'ancona':'AN','pesaro':'PU','urbino':'PU','macerata':'MC','ascoli piceno':'AP','fermo':'FM',
+          'terni':'TR','perugia':'PG',
+          'roma':'RM','rieti':'RI','viterbo':'VT','latina':'LT','frosinone':'FR',
+          'pescara':'PE','teramo':'TE','chieti':'CH','l aquila':'AQ',
+          'napoli':'NA','salerno':'SA','caserta':'CE','benevento':'BN','avellino':'AV',
+          'bari':'BA','barletta':'BT','andria':'BT','trani':'BT','brindisi':'BR','lecce':'LE','taranto':'TA','foggia':'FG',
+          'campobasso':'CB','isernia':'IS',
+          'catanzaro':'CZ','cosenza':'CS','crotone':'KR','reggio calabria':'RC','vibo valentia':'VV',
+          'palermo':'PA','trapani':'TP','agrigento':'AG','caltanissetta':'CL','enna':'EN','catania':'CT','messina':'ME','ragusa':'RG','siracusa':'SR',
+          'cagliari':'CA','sassari':'SS','nuoro':'NU','oristano':'OR','carbonia':'SU','iglesias':'SU'
+        };
         const k = String(city).toLowerCase().trim();
-        if (cityMap[k]) return cityMap[k];
+        fromCity = cityMap[k];
       }
-      return undefined;
+
+      return { fromCap, fromCity };
     };
 
-    // ---------- Line items ----------
-    const baseItems = items.length ? items : [{
-      price_data: { currency: 'eur', product_data: { name: 'Prodotto di test (fallback)' }, unit_amount: 100 },
-      quantity: 1,
-    }];
-
-    const line_items = baseItems.map((it) => {
+    // ---------- Line items (niente fallback) ----------
+    const line_items = items.map((it) => {
+      // Supporto diretto a price ID "price_..."
       if (typeof it.price === 'string' && it.price.startsWith('price_')) {
-        return { price: it.price, quantity: Math.max(1, Number(it.quantity ?? it.qty ?? 1)) };
+        const qty = Math.max(1, Number(it.quantity ?? it.qty ?? 1));
+        return { price: it.price, quantity: qty };
       }
-      const unitEuros = Number(it.amount ?? it.price ?? it.unit_amount ?? 0);
-      const unitCents = Math.max(1, Math.round(unitEuros * 100));
+      // Altrimenti accetta (name + amount in euro)
+      const unitEuros = Number(it.amount ?? it.price ?? it.unit_amount);
+      if (!isFinite(unitEuros) || unitEuros <= 0) {
+        throw new Error(`Importo non valido per l'articolo "${it.name ?? ''}"`);
+      }
+      const unitCents = Math.round(unitEuros * 100);
+      const qty = Math.max(1, Number(it.quantity ?? it.qty ?? 1));
       return {
         price_data: {
           currency: 'eur',
-          product_data: { name: String(it.name || 'Prodotto') },
+          product_data: { name: String(it.name || 'Articolo') },
           unit_amount: unitCents,
         },
-        quantity: Math.max(1, Number(it.quantity ?? it.qty ?? 1)),
+        quantity: qty,
       };
     });
 
@@ -157,31 +178,57 @@ export default async function handler(req, res) {
       },
     }];
 
-    // ---------- Customer (NO email; SI telefono; provincia dedotta) ----------
+    // ---------- Customer (NO email; SI telefono; validazione CAP/Provincia) ----------
     const name  = (customerInput.name  || '').trim() || undefined;
-    const phone = (customerInput.phone || '').trim() || undefined; // prefill telefono (non attiva Link da solo)
+    const phone = (customerInput.phone || '').trim() || undefined; // ok prefill telefono (non attiva Link da solo)
     const note  = (customerInput.note  || '').trim() || undefined;
-    const emailHint = (customerInput.email || '').trim().toLowerCase() || undefined; // solo metadato, NON prefill
+    const emailHint = (customerInput.email || '').trim().toLowerCase() || undefined; // metadato, NON prefill
 
     const addr = customerInput.address || {};
-    const explicitProvince = addr.state || addr.province || addr.prov || addr.provincia;
-    const inferredProvince = inferProvinceFromAddress({
-      postal_code: addr.postal_code || addr.cap,
-      city: addr.city,
-    });
-    const province = normalizeProvince(explicitProvince) || inferredProvince;
+    const rawCap = String(addr.postal_code || addr.cap || '').trim();
+    const city = addr.city || undefined;
+    const country = (addr.country || 'IT').toUpperCase();
+
+    // Validazioni solo per indirizzi IT
+    if (country === 'IT') {
+      if (rawCap && !/^\d{5}$/.test(rawCap)) {
+        return res.status(422).json({
+          error: 'CAP non valido: deve avere 5 cifre.',
+          code: 'INVALID_CAP',
+        });
+      }
+      const explicitProvince = addr.state || addr.province || addr.prov || addr.provincia;
+      const { fromCap, fromCity } = inferProvinceFromAddress({ postal_code: rawCap, city });
+
+      // Se entrambi presenti e diversi → blocca
+      if (fromCap && fromCity && fromCap !== fromCity) {
+        return res.status(422).json({
+          error: `Incongruenza indirizzo: il CAP ${rawCap} risulta ${fromCap}, ma la città "${city}" è in provincia ${fromCity}. Correggi CAP o città.`,
+          code: 'ADDRESS_MISMATCH',
+          details: { capProvince: fromCap, cityProvince: fromCity },
+        });
+      }
+
+      var province =
+        normalizeProvince(explicitProvince) || fromCap || fromCity || undefined;
+
+      // se mancano CAP e Città e non c’è provincia esplicita, lasciamo province undefined → Stripe chiederà
+    } else {
+      // Per paesi non IT non imponiamo controllo CAP
+      var province = normalizeProvince(addr.state || addr.province || addr.prov || addr.provincia);
+    }
 
     const addressForStripe = {
       line1: addr.line1 || undefined,
       line2: addr.line2 || undefined,
-      postal_code: addr.postal_code || addr.cap || undefined,
-      city: addr.city || undefined,
-      state: province || undefined, // <- provincia (sigla) se dedotta/trovata
-      country: (addr.country || 'IT').toUpperCase(),
+      postal_code: rawCap || undefined,
+      city: city || undefined,
+      state: province || undefined, // provincia/suddivisione se dedotta
+      country,
     };
 
+    // Customer senza email (così Link non parte da solo)
     const createdCustomer = await stripe.customers.create({
-      // email: (omessa apposta per non attivare Link)
       name,
       phone,
       address: addressForStripe,
@@ -205,16 +252,17 @@ export default async function handler(req, res) {
       mode: 'payment',
       line_items,
 
-      // Manteniamo wallet ma mettiamo la carta in evidenza
-      payment_method_types: ['card', 'link', 'amazon_pay'],
+      // Lasciamo a Stripe i metodi disponibili (card + wallet). Senza email, Link non parte da solo.
+      // payment_method_types: ['card','link','amazon_pay'],
 
       billing_address_collection: 'required',
       phone_number_collection: { enabled: true },
       shipping_address_collection: { allowed_countries: ['IT', 'SM', 'VA'] },
       shipping_options: shippingOptions,
 
-      success_url: success_url || `${origin}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: cancel_url || `${origin}/cancel.html`,
+      // Default senza creare nuove pagine: atterra in home con query
+      success_url: success_url || `${origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:  cancel_url  || `${origin}/?checkout=cancel`,
 
       allow_promotion_codes: true,
       metadata: {
@@ -223,17 +271,18 @@ export default async function handler(req, res) {
         email_initial: emailHint || '',
         phone_initial: phone || '',
         address_line1_initial: addr.line1 || '',
-        city_initial: addr.city || '',
-        cap_initial: addr.postal_code || addr.cap || '',
+        city_initial: city || '',
+        cap_initial: rawCap || '',
         province_initial: province || '',
         note: note || '',
         ...metadata,
       },
 
+      // Prefill via customer; aggiorna se l’utente modifica nel Checkout
       customer: customerId,
       customer_update: { address: 'auto', name: 'auto', shipping: 'auto' },
 
-      // IMPORTANTISSIMO: niente customer_email (così Link resta opzionale)
+      // IMPORTANTISSIMO: niente customer_email → Link resta opzionale
     };
 
     const session = await stripe.checkout.sessions.create(sessionParams);
@@ -241,6 +290,7 @@ export default async function handler(req, res) {
 
   } catch (err) {
     console.error('Stripe create session error:', err);
+    // Errori di prezzo/cart mal formati finiscono qui
     return res.status(500).json({ error: err?.raw?.message || err.message || 'Stripe error' });
   }
 }
