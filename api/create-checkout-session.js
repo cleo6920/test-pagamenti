@@ -119,7 +119,7 @@ export default async function handler(req, res) {
 
       // Mostra e consente modifica: se il cliente cambia i dati su Checkout, li aggiorniamo sul Customer
       customer_update: { address: 'auto', name: 'auto', shipping: 'auto' },
-      customer_creation: 'if_required', // Crea un customer se non esiste e non è stato fornito un customerId
+      // Rimosso `customer_creation: 'if_required',` per evitare il conflitto
 
       // Mostra i campi su Checkout (anche se non c'è customer)
       billing_address_collection: 'required',
@@ -151,3 +151,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message || 'Stripe error' });
   }
 }
+
+
