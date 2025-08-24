@@ -1,4 +1,4 @@
-// /api/create-checkout-session.js — Carta in primo piano + Link/Amazon opzionali
+// /api/create-checkout-session.js — Carta in primo piano, Link/Amazon opzionali, NO email/phone prefill
 import Stripe from 'stripe';
 
 export default async function handler(req, res) {
@@ -12,13 +12,13 @@ export default async function handler(req, res) {
     const {
       items = [],
       customer: customerInput = {}, // { name, email, phone, address:{line1,postal_code,city,state,country}, note }
-      shippingCostOverride = 0,     // numero in € (es. 6)
-      success_url,                  // opzionale
-      cancel_url,                   // opzionale
-      metadata = {},                // opzionale
+      shippingCostOverride = 0,     // es. 6 (euro)
+      success_url,
+      cancel_url,
+      metadata = {},
     } = req.body || {};
 
-    // --- LINE ITEMS: supporta price (ID Stripe) o price_data dinamico in euro ---
+    // --- LINE ITEMS (accetta price "price_..." o price_data in euro) ---
     const baseItems = items.length ? items : [{
       price_data: { currency: 'eur', product_data: { name: 'Prodotto di test (fallback)' }, unit_amount: 100 },
       quantity: 1,
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
         return { price: it.price, quantity: Math.max(1, Number(it.quantity ?? it.qty ?? 1)) };
       }
       const unitEuros = Number(it.amount ?? it.price ?? it.unit_amount ?? 0);
-      const unitCents = Math.max(1, Math.round(unitEuros * 100)); // evita 0/NaN
+      const unitCents = Math.max(1, Math.round(unitEuros * 100));
       return {
         price_data: {
           currency: 'eur',
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       };
     });
 
-    // --- Spedizione dinamica (una tariffa: a pagamento o gratuita) ---
+    // --- Spedizione dinamica (una tariffa) ---
     const shippingOptions = [{
       shipping_rate_data: {
         display_name: Number(shippingCostOverride) > 0 ? 'Poste – Standard' : 'Spedizione Gratuita',
@@ -50,11 +50,11 @@ export default async function handler(req, res) {
       },
     }];
 
-    // --- PREPARA un CUSTOMER senza email per prefill nome/indirizzo (così il form carta resta in primo piano) ---
-    const name  = (customerInput.name  || '').trim() || undefined;
-    const phone = (customerInput.phone || '').trim() || undefined;
-    const note  = (customerInput.note  || '').trim() || undefined;
-    const emailHint = (customerInput.email || '').trim().toLowerCase() || undefined; // solo come metadato, non per prefill
+    // --- CUSTOMER per prefill (senza email e senza phone per non attivare Link) ---
+    const name = (customerInput.name || '').trim() || undefined;
+    const note = (customerInput.note || '').trim() || undefined;
+    const emailHint = (customerInput.email || '').trim().toLowerCase() || undefined; // solo metadato, NON prefill
+    // NON usiamo customerInput.phone
 
     const addr = customerInput.address || {};
     const addressForStripe = {
@@ -62,22 +62,21 @@ export default async function handler(req, res) {
       line2: addr.line2 || undefined,
       postal_code: addr.postal_code || addr.cap || undefined,
       city: addr.city || undefined,
-      state: addr.state || undefined, // provincia
+      state: addr.state || undefined,
       country: (addr.country || 'IT').toUpperCase(),
     };
 
-    // Creiamo SEMPRE un customer “pulito” senza email così il checkout non propone Link in automatico
+    // Creiamo un customer “pulito” senza email/phone
     const createdCustomer = await stripe.customers.create({
-      // email: (omessa apposta)
       name,
-      phone,
+      // phone: (omesso apposta)
       address: addressForStripe,
       shipping: (name || addressForStripe.line1)
-        ? { name: name || undefined, phone: phone || undefined, address: addressForStripe }
+        ? { name: name || undefined, /* phone omesso */, address: addressForStripe }
         : undefined,
       metadata: {
         note: note || '',
-        email_hint: emailHint || '',        // ci teniamo l’indizio email per uso post-pagamento
+        email_hint: emailHint || '',
         source: 'oasi-busatello-v4',
       },
     });
@@ -87,16 +86,15 @@ export default async function handler(req, res) {
       req.headers.origin
       || (req.headers.host ? `https://${req.headers.host}` : 'http://localhost:3000');
 
-    // --- Parametri della sessione: carta in primo piano, Link/Amazon visibili come opzioni ---
+    // --- Parametri sessione: carta in primo piano, Link/Amazon abilitati ma non “dominanti” ---
     const sessionParams = {
       mode: 'payment',
       line_items,
 
-      // Manteniamo wallet ma mostriamo subito la carta
-      payment_method_types: ['card', 'link', 'amazon_pay'],
+      payment_method_types: ['card', 'link', 'amazon_pay'], // wallet visibili, ma niente login automatico
 
       billing_address_collection: 'required',
-      phone_number_collection: { enabled: true },
+      // phone_number_collection: { enabled: true }, // DISABILITATO per non innescare Link via telefono
       shipping_address_collection: { allowed_countries: ['IT', 'SM', 'VA'] },
       shipping_options: shippingOptions,
 
@@ -107,8 +105,7 @@ export default async function handler(req, res) {
       metadata: {
         source: 'oasi-busatello-v4',
         name_initial: name || '',
-        email_initial: emailHint || '',          // solo informativo
-        phone_initial: phone || '',
+        email_initial: emailHint || '',
         address_line1_initial: addr.line1 || '',
         city_initial: addr.city || '',
         cap_initial: addr.postal_code || addr.cap || '',
@@ -116,11 +113,10 @@ export default async function handler(req, res) {
         ...metadata,
       },
 
-      // Prefill tramite customer + aggiornamento automatico se l’utente cambia dati
       customer: customerId,
       customer_update: { address: 'auto', name: 'auto', shipping: 'auto' },
 
-      // IMPORTANTISSIMO: niente customer_email qui, per non attivare Link in automatico
+      // NIENTE customer_email qui
     };
 
     const session = await stripe.checkout.sessions.create(sessionParams);
