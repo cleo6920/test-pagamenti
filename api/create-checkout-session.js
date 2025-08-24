@@ -1,8 +1,9 @@
 // /api/create-checkout-session.js
-// Provincia dedotta SOLO dal CAP (fonte di verità). Niente city-map da mantenere.
-// Blocchi: 422 INVALID_CAP (CAP IT non 5 cifre) | 422 PROVINCE_CONFLICT (se passi una provincia diversa da quella del CAP).
-// Link/Amazon opzionali (no email prefill). Carta in primo piano.
-// Niente prodotto di test: se mancano items -> 400 MISSING_ITEMS.
+// - Provincia dedotta SOLO dal CAP (fonte di verità). Niente city-map.
+// - Blocchi: 422 INVALID_CAP (CAP IT non 5 cifre) | 422 PROVINCE_CONFLICT (se passi una provincia diversa da quella del CAP).
+// - Normalizzazione telefono in E.164 (+39...) per migliorare il prefill di Stripe.
+// - Link/Amazon opzionali (no email prefill). Carta in primo piano.
+// - Niente prodotto di test: se mancano items -> 400 MISSING_ITEMS.
 
 import Stripe from 'stripe';
 
@@ -29,6 +30,39 @@ export default async function handler(req, res) {
     }
 
     // ---------- Utils ----------
+    const onlyDigits = (s = '') => String(s).replace(/[^\d]/g, '');
+
+    // Normalizza telefono in E.164 (assume IT se non passa country o è IT)
+    const normalizePhone = (raw, country = 'IT') => {
+      if (!raw) return undefined;
+      let s = String(raw).trim();
+      // 00.. -> +..
+      if (s.startsWith('00')) s = '+' + s.slice(2);
+      // togli spazi e punteggiatura, lascia "+"
+      s = s.replace(/(?!^\+)[^\d]/g, '');
+      const isPlus = s.startsWith('+');
+
+      if (isPlus) {
+        const digits = '+' + onlyDigits(s.slice(1));
+        // controllo lunghezza plausibile E.164 (max 15 cifre dopo +, min ~6)
+        if (digits.length < 7 || digits.length > 16) return undefined;
+        return digits;
+      }
+
+      const ctry = (country || 'IT').toUpperCase();
+      const d = onlyDigits(s);
+      if (!d) return undefined;
+
+      // Italia: in E.164 i numeri geografici mantengono lo 0 (es. 02..., 06...).
+      // Quindi +39 + d così com’è (sia mobili che fissi).
+      if (ctry === 'IT') {
+        return '+39' + d;
+      }
+
+      // Fallback generico: aggiungi comunque +39 se non noto (puoi adattarlo per paesi esteri)
+      return '+39' + d;
+    };
+
     const normalizeProvince = (val) => {
       if (!val) return undefined;
       const raw = String(val).trim();
@@ -62,7 +96,7 @@ export default async function handler(req, res) {
       return map[k] || raw.toUpperCase();
     };
 
-    // Provincia dal CAP (5→4→3 cifre) — copertura Italia
+    // Provincia dal CAP (5→4→3 cifre)
     const provinceFromCap = (postal_code) => {
       if (!postal_code) return undefined;
       const pc = String(postal_code).trim();
@@ -100,7 +134,7 @@ export default async function handler(req, res) {
         // Sardegna
         '070':'SS','071':'SS','080':'NU','090':'CA','091':'CA','092':'SU','09070':'OR'
       };
-      for (const n of [5,4,3]) {
+      for (const n of [5, 4, 3]) {
         const p = pc.slice(0, n);
         if (prefixMap[p]) return prefixMap[p];
       }
@@ -138,7 +172,7 @@ export default async function handler(req, res) {
 
     // ---------- Customer & indirizzo ----------
     const name  = (customerInput.name  || '').trim() || undefined;
-    const phone = (customerInput.phone || '').trim() || undefined; // Stripe non lo precompila, ma lo salviamo comunque
+    const rawPhone = (customerInput.phone || '').trim();
     const note  = (customerInput.note  || '').trim() || undefined;
     const emailHint = (customerInput.email || '').trim().toLowerCase() || undefined; // metadato, NON prefill
 
@@ -146,7 +180,10 @@ export default async function handler(req, res) {
     const rawCap   = String(addr.postal_code || addr.cap || '').trim() || undefined;
     const city     = addr.city || undefined;
     const country  = (addr.country || 'IT').toUpperCase();
-    const provIn   = addr.state || addr.province || addr.prov || addr.provincia; // se ce l’hai già
+    const provIn   = addr.state || addr.province || addr.prov || addr.provincia; // se presente
+
+    // Normalizza telefono (migliora prefill su Stripe)
+    const phone = normalizePhone(rawPhone, country);
 
     // Validazioni specifiche Italia
     let province; // quella che useremo
@@ -183,7 +220,7 @@ export default async function handler(req, res) {
     // Customer (senza email → Link non parte da solo)
     const createdCustomer = await stripe.customers.create({
       name,
-      phone,
+      phone, // E.164
       address: addressForStripe,
       shipping: (name || addressForStripe.line1)
         ? { name: name || undefined, phone: phone || undefined, address: addressForStripe }
