@@ -1,4 +1,4 @@
-// /api/create-checkout-session.js — Carta in primo piano, Link/Amazon opzionali, NO email/phone prefill
+// /api/create-checkout-session.js — Carta in primo piano, Link/Amazon opzionali, prefill telefono (no email)
 import Stripe from 'stripe';
 
 export default async function handler(req, res) {
@@ -50,11 +50,11 @@ export default async function handler(req, res) {
       },
     }];
 
-    // --- CUSTOMER per prefill (senza email e senza phone per non attivare Link) ---
-    const name = (customerInput.name || '').trim() || undefined;
-    const note = (customerInput.note || '').trim() || undefined;
+    // --- CUSTOMER per prefill (NO email, SI telefono) ---
+    const name  = (customerInput.name  || '').trim() || undefined;
+    const phone = (customerInput.phone || '').trim() || undefined; // <- vogliamo precompilarlo
+    const note  = (customerInput.note  || '').trim() || undefined;
     const emailHint = (customerInput.email || '').trim().toLowerCase() || undefined; // solo metadato, NON prefill
-    // NON usiamo customerInput.phone
 
     const addr = customerInput.address || {};
     const addressForStripe = {
@@ -66,13 +66,14 @@ export default async function handler(req, res) {
       country: (addr.country || 'IT').toUpperCase(),
     };
 
-    // Creiamo un customer “pulito” senza email/phone
+    // Creiamo un customer “pulito” senza email, ma con phone per prefill
     const createdCustomer = await stripe.customers.create({
+      // email: (omessa apposta per non attivare Link)
       name,
-      // phone: (omesso apposta)
+      phone,                         // <- prefill telefono
       address: addressForStripe,
       shipping: (name || addressForStripe.line1)
-        ? { name: name || undefined, /* phone omesso */, address: addressForStripe }
+        ? { name: name || undefined, phone: phone || undefined, address: addressForStripe }
         : undefined,
       metadata: {
         note: note || '',
@@ -94,7 +95,7 @@ export default async function handler(req, res) {
       payment_method_types: ['card', 'link', 'amazon_pay'], // wallet visibili, ma niente login automatico
 
       billing_address_collection: 'required',
-      // phone_number_collection: { enabled: true }, // DISABILITATO per non innescare Link via telefono
+      phone_number_collection: { enabled: true }, // mostra/edit del telefono nel form
       shipping_address_collection: { allowed_countries: ['IT', 'SM', 'VA'] },
       shipping_options: shippingOptions,
 
@@ -106,6 +107,7 @@ export default async function handler(req, res) {
         source: 'oasi-busatello-v4',
         name_initial: name || '',
         email_initial: emailHint || '',
+        phone_initial: phone || '',
         address_line1_initial: addr.line1 || '',
         city_initial: addr.city || '',
         cap_initial: addr.postal_code || addr.cap || '',
@@ -113,10 +115,11 @@ export default async function handler(req, res) {
         ...metadata,
       },
 
+      // Prefill tramite customer + aggiornamento automatico se l’utente cambia dati
       customer: customerId,
       customer_update: { address: 'auto', name: 'auto', shipping: 'auto' },
 
-      // NIENTE customer_email qui
+      // IMPORTANTISSIMO: niente customer_email qui (per non attivare Link)
     };
 
     const session = await stripe.checkout.sessions.create(sessionParams);
