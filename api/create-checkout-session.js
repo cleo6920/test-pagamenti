@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     const customerInput = body.customer || {};
     const shippingCostOverride = typeof body.shippingCostOverride === 'number' ? body.shippingCostOverride : 0; // Costo spedizione dal frontend
 
-    // Mappa carrello (ignora eventuale riga "Spedizione" se già presente, ma il frontend non la invia più)
+    // Mappa carrello
     const line_items = rawItems.map(it => ({
       price_data: {
         currency: 'eur',
@@ -105,7 +105,6 @@ export default async function handler(req, res) {
         });
     }
 
-
     // ===== 4) CREA LA CHECKOUT SESSION =====
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -119,7 +118,7 @@ export default async function handler(req, res) {
 
       // Mostra e consente modifica: se il cliente cambia i dati su Checkout, li aggiorniamo sul Customer
       customer_update: { address: 'auto', name: 'auto', shipping: 'auto' },
-      // Rimosso `customer_creation: 'if_required',` per evitare il conflitto
+      // *** IMPORTANTE: La riga `customer_creation: 'if_required'` è stata RIMOSSA qui. ***
 
       // Mostra i campi su Checkout (anche se non c'è customer)
       billing_address_collection: 'required',
@@ -151,5 +150,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message || 'Stripe error' });
   }
 }
-
-
