@@ -1,9 +1,3 @@
-// /api/create-checkout-session.js
-// - Provincia dedotta SOLO dal CAP (fonte di verità). Niente city-map.
-// - Blocchi: 422 INVALID_CAP (CAP IT non 5 cifre) | 422 PROVINCE_CONFLICT (se passi una provincia diversa da quella del CAP).
-// - Normalizzazione telefono in E.164 (+39...) per migliorare il prefill di Stripe.
-// - Link/Amazon opzionali (no email prefill). Carta in primo piano.
-// - Niente prodotto di test: se mancano items -> 400 MISSING_ITEMS.
 
 import Stripe from 'stripe';
 
@@ -24,43 +18,25 @@ export default async function handler(req, res) {
       metadata = {},
     } = req.body || {};
 
-    // ---------- Items obbligatori ----------
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'Items mancanti', code: 'MISSING_ITEMS' });
     }
 
-    // ---------- Utils ----------
+    // --- utils ---
     const onlyDigits = (s = '') => String(s).replace(/[^\d]/g, '');
-
-    // Normalizza telefono in E.164 (assume IT se non passa country o è IT)
     const normalizePhone = (raw, country = 'IT') => {
       if (!raw) return undefined;
       let s = String(raw).trim();
-      // 00.. -> +..
       if (s.startsWith('00')) s = '+' + s.slice(2);
-      // togli spazi e punteggiatura, lascia "+"
       s = s.replace(/(?!^\+)[^\d]/g, '');
-      const isPlus = s.startsWith('+');
-
-      if (isPlus) {
-        const digits = '+' + onlyDigits(s.slice(1));
-        // controllo lunghezza plausibile E.164 (max 15 cifre dopo +, min ~6)
-        if (digits.length < 7 || digits.length > 16) return undefined;
-        return digits;
+      if (s.startsWith('+')) {
+        const t = '+' + onlyDigits(s.slice(1));
+        if (t.length < 7 || t.length > 16) return undefined;
+        return t;
       }
-
-      const ctry = (country || 'IT').toUpperCase();
       const d = onlyDigits(s);
       if (!d) return undefined;
-
-      // Italia: in E.164 i numeri geografici mantengono lo 0 (es. 02..., 06...).
-      // Quindi +39 + d così com’è (sia mobili che fissi).
-      if (ctry === 'IT') {
-        return '+39' + d;
-      }
-
-      // Fallback generico: aggiungi comunque +39 se non noto (puoi adattarlo per paesi esteri)
-      return '+39' + d;
+      return '+39' + d; // default IT
     };
 
     const normalizeProvince = (val) => {
@@ -104,9 +80,10 @@ export default async function handler(req, res) {
         // Piemonte / VdA / Liguria
         '100':'TO','101':'TO','111':'AO','120':'CN','121':'CN','130':'VC','131':'VC','139':'BI','140':'AT','141':'AT','150':'AL','151':'AL',
         '160':'GE','170':'SV','180':'IM','190':'SP',
-        // Lombardia
+        // Lombardia (+ MN aggiunta)
         '200':'MI','201':'MI','208':'MB','210':'VA','211':'VA','220':'CO','230':'SO','238':'LC','239':'LC','240':'BG',
         '250':'BS','251':'BS','260':'CR','268':'LO','269':'LO','270':'PV',
+        '460':'MN','461':'MN', // <-- FIX Mantova
         // Trentino-Alto Adige
         '380':'TN','381':'TN','390':'BZ','391':'BZ',
         // Veneto / Friuli VG
@@ -141,7 +118,7 @@ export default async function handler(req, res) {
       return undefined;
     };
 
-    // ---------- Line items ----------
+    // --- line items ---
     const line_items = items.map((it) => {
       if (typeof it.price === 'string' && it.price.startsWith('price_')) {
         return { price: it.price, quantity: Math.max(1, Number(it.quantity ?? it.qty ?? 1)) };
@@ -160,7 +137,7 @@ export default async function handler(req, res) {
       };
     });
 
-    // ---------- Shipping ----------
+    // --- shipping ---
     const shippingOptions = [{
       shipping_rate_data: {
         display_name: Number(shippingCostOverride) > 0 ? 'Poste – Standard' : 'Spedizione Gratuita',
@@ -170,7 +147,7 @@ export default async function handler(req, res) {
       },
     }];
 
-    // ---------- Customer & indirizzo ----------
+    // --- customer & indirizzo ---
     const name  = (customerInput.name  || '').trim() || undefined;
     const rawPhone = (customerInput.phone || '').trim();
     const note  = (customerInput.note  || '').trim() || undefined;
@@ -180,21 +157,17 @@ export default async function handler(req, res) {
     const rawCap   = String(addr.postal_code || addr.cap || '').trim() || undefined;
     const city     = addr.city || undefined;
     const country  = (addr.country || 'IT').toUpperCase();
-    const provIn   = addr.state || addr.province || addr.prov || addr.provincia; // se presente
+    const provIn   = addr.state || addr.province || addr.prov || addr.provincia;
 
-    // Normalizza telefono (migliora prefill su Stripe)
     const phone = normalizePhone(rawPhone, country);
 
-    // Validazioni specifiche Italia
-    let province; // quella che useremo
+    let province;
     if (country === 'IT') {
       if (rawCap && !/^\d{5}$/.test(rawCap)) {
         return res.status(422).json({ error: 'CAP non valido: deve avere 5 cifre.', code: 'INVALID_CAP' });
       }
       const fromCap = provinceFromCap(rawCap);
       const explicit = normalizeProvince(provIn);
-
-      // Se mi passi una provincia esplicita e NON coincide con quella dedotta dal CAP → blocco
       if (explicit && fromCap && explicit !== fromCap) {
         return res.status(422).json({
           error: `Provincia incoerente con CAP: CAP ${rawCap} → ${fromCap}, ma hai passato ${explicit}.`,
@@ -202,10 +175,9 @@ export default async function handler(req, res) {
           details: { capProvince: fromCap, providedProvince: explicit },
         });
       }
-
-      province = explicit || fromCap || undefined; // preferisci quella del CAP
+      province = explicit || fromCap || undefined;
     } else {
-      province = normalizeProvince(provIn); // per estero non imponiamo regole sul CAP
+      province = normalizeProvince(provIn);
     }
 
     const addressForStripe = {
@@ -213,11 +185,10 @@ export default async function handler(req, res) {
       line2: addr.line2 || undefined,
       postal_code: rawCap || undefined,
       city: city || undefined,
-      state: province || undefined,   // <- precompila "Provincia" con sigla (es. MN)
+      state: province || undefined,  // <- prefill provincia
       country,
     };
 
-    // Customer (senza email → Link non parte da solo)
     const createdCustomer = await stripe.customers.create({
       name,
       phone, // E.164
@@ -231,22 +202,15 @@ export default async function handler(req, res) {
 
     const origin = req.headers.origin || (req.headers.host ? `https://${req.headers.host}` : 'http://localhost:3000');
 
-    // ---------- Checkout Session ----------
-    const sessionParams = {
+    const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items,
-
-      // Lasciamo a Stripe decidere i metodi (card + wallet). Niente email → Link resta opzionale.
-      // payment_method_types: ['card','link','amazon_pay'],
-
       billing_address_collection: 'required',
       phone_number_collection: { enabled: true },
       shipping_address_collection: { allowed_countries: ['IT', 'SM', 'VA'] },
       shipping_options: shippingOptions,
-
       success_url: success_url || `${origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  cancel_url  || `${origin}/?checkout=cancel`,
-
       allow_promotion_codes: true,
       metadata: {
         source: 'oasi-busatello-v4',
@@ -260,13 +224,10 @@ export default async function handler(req, res) {
         note: note || '',
         ...metadata,
       },
-
       customer: customerId,
-      customer_update: { address: 'auto', name: 'auto', shipping: 'auto' },
-      // niente customer_email
-    };
+      customer_update: { address: 'auto', name: 'auto', shipping: 'auto' }
+    });
 
-    const session = await stripe.checkout.sessions.create(sessionParams);
     return res.status(200).json({ id: session.id, url: session.url });
 
   } catch (err) {
