@@ -1,11 +1,9 @@
 // /api/create-checkout-session.js
-// Focus: CAP ↔︎ Città ↔︎ Provincia (deduce e valida), NO prodotto di test
-// - Niente email prefill (così Link non parte da solo)
-// - Carta in primo piano; Link/Amazon opzionali (lasciamo a Stripe i metodi disponibili)
-// - Se items mancano → 400 MISSING_ITEMS
-// - Se CAP non è 5 cifre (IT) → 422 INVALID_CAP
-// - Se CAP e Città portano a province diverse (IT) → 422 ADDRESS_MISMATCH
-// - Deduciamo provincia da state/province esplicita, altrimenti da CAP (5→4→3) o da Città
+// Provincia dedotta SOLO dal CAP (fonte di verità). Niente city-map da mantenere.
+// Blocchi: 422 INVALID_CAP (CAP IT non 5 cifre) | 422 PROVINCE_CONFLICT (se passi una provincia diversa da quella del CAP).
+// Link/Amazon opzionali (no email prefill). Carta in primo piano.
+// Niente prodotto di test: se mancano items -> 400 MISSING_ITEMS.
+
 import Stripe from 'stripe';
 
 export default async function handler(req, res) {
@@ -18,19 +16,16 @@ export default async function handler(req, res) {
 
     const {
       items,
-      customer: customerInput = {}, // { name, email, phone, address:{line1,postal_code,cap,city,state|province|prov|provincia,country}, note }
+      customer: customerInput = {}, // { name, email, phone, address:{line1,postal_code|cap,city,state|province|prov|provincia,country}, note }
       shippingCostOverride = 0,
       success_url,
       cancel_url,
       metadata = {},
     } = req.body || {};
 
-    // ---------- Items obbligatori (niente prodotto di test) ----------
+    // ---------- Items obbligatori ----------
     if (!Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({
-        error: 'Items mancanti: passa almeno una riga carrello.',
-        code: 'MISSING_ITEMS',
-      });
+      return res.status(400).json({ error: 'Items mancanti', code: 'MISSING_ITEMS' });
     }
 
     // ---------- Utils ----------
@@ -45,7 +40,7 @@ export default async function handler(req, res) {
         'parma':'PR','reggio emilia':'RE','bergamo':'BG','bologna':'BO',
         'padova':'PD','vicenza':'VI','trento':'TN','bolzano':'BZ',
         'cremona':'CR','pavia':'PV','lodi':'LO','lecco':'LC','como':'CO','sondrio':'SO','varese':'VA',
-        'alpignano':'TO','torino':'TO','rivoli':'TO','collegno':'TO','pianezza':'TO',
+        'torino':'TO','alpignano':'TO','rivoli':'TO','collegno':'TO','pianezza':'TO',
         'novara':'NO','vercelli':'VC','biella':'BI','asti':'AT','alessandria':'AL','cuneo':'CN','aosta':'AO',
         'genova':'GE','savona':'SV','imperia':'IM','la spezia':'SP',
         'venezia':'VE','treviso':'TV','belluno':'BL','udine':'UD','gorizia':'GO','trieste':'TS',
@@ -67,8 +62,10 @@ export default async function handler(req, res) {
       return map[k] || raw.toUpperCase();
     };
 
-    // deduzione provincia da CAP (5→4→3 cifre) o città (copertura ampia Italia)
-    const inferProvinceFromAddress = ({ postal_code, city }) => {
+    // Provincia dal CAP (5→4→3 cifre) — copertura Italia
+    const provinceFromCap = (postal_code) => {
+      if (!postal_code) return undefined;
+      const pc = String(postal_code).trim();
       const prefixMap = {
         // Piemonte / VdA / Liguria
         '100':'TO','101':'TO','111':'AO','120':'CN','121':'CN','130':'VC','131':'VC','139':'BI','140':'AT','141':'AT','150':'AL','151':'AL',
@@ -103,68 +100,29 @@ export default async function handler(req, res) {
         // Sardegna
         '070':'SS','071':'SS','080':'NU','090':'CA','091':'CA','092':'SU','09070':'OR'
       };
-
-      let fromCap;
-      if (postal_code) {
-        const pc = String(postal_code).trim();
-        for (const n of [5,4,3]) {
-          const p = pc.slice(0, n);
-          if (prefixMap[p]) { fromCap = prefixMap[p]; break; }
-        }
+      for (const n of [5,4,3]) {
+        const p = pc.slice(0, n);
+        if (prefixMap[p]) return prefixMap[p];
       }
-
-      let fromCity;
-      if (city) {
-        const cityMap = {
-          // zona utente + principali capoluoghi
-          'san giovanni del dosso':'MN','poggio rusco':'MN','sermide':'MN','felonica':'MN','mantova':'MN',
-          'mirandola':'MO','modena':'MO','carpi':'MO',
-          'verona':'VR','rovigo':'RO','ferrara':'FE','bologna':'BO','parma':'PR','reggio emilia':'RE','ravenna':'RA',
-          'padova':'PD','vicenza':'VI','treviso':'TV','venezia':'VE','belluno':'BL',
-          'trento':'TN','bolzano':'BZ',
-          'milano':'MI','monza':'MB','brescia':'BS','bergamo':'BG','cremona':'CR','pavia':'PV','lodi':'LO','lecco':'LC','como':'CO','sondrio':'SO','varese':'VA',
-          'alpignano':'TO','torino':'TO','rivoli':'TO','collegno':'TO','pianezza':'TO',
-          'genova':'GE','savona':'SV','imperia':'IM','la spezia':'SP',
-          'firenze':'FI','prato':'PO','pistoia':'PT','lucca':'LU','pisa':'PI','livorno':'LI','arezzo':'AR','siena':'SI','grosseto':'GR','massa':'MS',
-          'ancona':'AN','pesaro':'PU','urbino':'PU','macerata':'MC','ascoli piceno':'AP','fermo':'FM',
-          'terni':'TR','perugia':'PG',
-          'roma':'RM','rieti':'RI','viterbo':'VT','latina':'LT','frosinone':'FR',
-          'pescara':'PE','teramo':'TE','chieti':'CH','l aquila':'AQ',
-          'napoli':'NA','salerno':'SA','caserta':'CE','benevento':'BN','avellino':'AV',
-          'bari':'BA','barletta':'BT','andria':'BT','trani':'BT','brindisi':'BR','lecce':'LE','taranto':'TA','foggia':'FG',
-          'campobasso':'CB','isernia':'IS',
-          'catanzaro':'CZ','cosenza':'CS','crotone':'KR','reggio calabria':'RC','vibo valentia':'VV',
-          'palermo':'PA','trapani':'TP','agrigento':'AG','caltanissetta':'CL','enna':'EN','catania':'CT','messina':'ME','ragusa':'RG','siracusa':'SR',
-          'cagliari':'CA','sassari':'SS','nuoro':'NU','oristano':'OR','carbonia':'SU','iglesias':'SU'
-        };
-        const k = String(city).toLowerCase().trim();
-        fromCity = cityMap[k];
-      }
-
-      return { fromCap, fromCity };
+      return undefined;
     };
 
-    // ---------- Line items (niente fallback) ----------
+    // ---------- Line items ----------
     const line_items = items.map((it) => {
-      // Supporto diretto a price ID "price_..."
       if (typeof it.price === 'string' && it.price.startsWith('price_')) {
-        const qty = Math.max(1, Number(it.quantity ?? it.qty ?? 1));
-        return { price: it.price, quantity: qty };
+        return { price: it.price, quantity: Math.max(1, Number(it.quantity ?? it.qty ?? 1)) };
       }
-      // Altrimenti accetta (name + amount in euro)
       const unitEuros = Number(it.amount ?? it.price ?? it.unit_amount);
       if (!isFinite(unitEuros) || unitEuros <= 0) {
         throw new Error(`Importo non valido per l'articolo "${it.name ?? ''}"`);
       }
-      const unitCents = Math.round(unitEuros * 100);
-      const qty = Math.max(1, Number(it.quantity ?? it.qty ?? 1));
       return {
         price_data: {
           currency: 'eur',
           product_data: { name: String(it.name || 'Articolo') },
-          unit_amount: unitCents,
+          unit_amount: Math.round(unitEuros * 100),
         },
-        quantity: qty,
+        quantity: Math.max(1, Number(it.quantity ?? it.qty ?? 1)),
       };
     });
 
@@ -178,44 +136,39 @@ export default async function handler(req, res) {
       },
     }];
 
-    // ---------- Customer (NO email; SI telefono; validazione CAP/Provincia) ----------
+    // ---------- Customer & indirizzo ----------
     const name  = (customerInput.name  || '').trim() || undefined;
-    const phone = (customerInput.phone || '').trim() || undefined; // ok prefill telefono (non attiva Link da solo)
+    const phone = (customerInput.phone || '').trim() || undefined; // Stripe non lo precompila, ma lo salviamo comunque
     const note  = (customerInput.note  || '').trim() || undefined;
     const emailHint = (customerInput.email || '').trim().toLowerCase() || undefined; // metadato, NON prefill
 
     const addr = customerInput.address || {};
-    const rawCap = String(addr.postal_code || addr.cap || '').trim();
-    const city = addr.city || undefined;
-    const country = (addr.country || 'IT').toUpperCase();
+    const rawCap   = String(addr.postal_code || addr.cap || '').trim() || undefined;
+    const city     = addr.city || undefined;
+    const country  = (addr.country || 'IT').toUpperCase();
+    const provIn   = addr.state || addr.province || addr.prov || addr.provincia; // se ce l’hai già
 
-    // Validazioni solo per indirizzi IT
+    // Validazioni specifiche Italia
+    let province; // quella che useremo
     if (country === 'IT') {
       if (rawCap && !/^\d{5}$/.test(rawCap)) {
-        return res.status(422).json({
-          error: 'CAP non valido: deve avere 5 cifre.',
-          code: 'INVALID_CAP',
-        });
+        return res.status(422).json({ error: 'CAP non valido: deve avere 5 cifre.', code: 'INVALID_CAP' });
       }
-      const explicitProvince = addr.state || addr.province || addr.prov || addr.provincia;
-      const { fromCap, fromCity } = inferProvinceFromAddress({ postal_code: rawCap, city });
+      const fromCap = provinceFromCap(rawCap);
+      const explicit = normalizeProvince(provIn);
 
-      // Se entrambi presenti e diversi → blocca
-      if (fromCap && fromCity && fromCap !== fromCity) {
+      // Se mi passi una provincia esplicita e NON coincide con quella dedotta dal CAP → blocco
+      if (explicit && fromCap && explicit !== fromCap) {
         return res.status(422).json({
-          error: `Incongruenza indirizzo: il CAP ${rawCap} risulta ${fromCap}, ma la città "${city}" è in provincia ${fromCity}. Correggi CAP o città.`,
-          code: 'ADDRESS_MISMATCH',
-          details: { capProvince: fromCap, cityProvince: fromCity },
+          error: `Provincia incoerente con CAP: CAP ${rawCap} → ${fromCap}, ma hai passato ${explicit}.`,
+          code: 'PROVINCE_CONFLICT',
+          details: { capProvince: fromCap, providedProvince: explicit },
         });
       }
 
-      var province =
-        normalizeProvince(explicitProvince) || fromCap || fromCity || undefined;
-
-      // se mancano CAP e Città e non c’è provincia esplicita, lasciamo province undefined → Stripe chiederà
+      province = explicit || fromCap || undefined; // preferisci quella del CAP
     } else {
-      // Per paesi non IT non imponiamo controllo CAP
-      var province = normalizeProvince(addr.state || addr.province || addr.prov || addr.provincia);
+      province = normalizeProvince(provIn); // per estero non imponiamo regole sul CAP
     }
 
     const addressForStripe = {
@@ -223,11 +176,11 @@ export default async function handler(req, res) {
       line2: addr.line2 || undefined,
       postal_code: rawCap || undefined,
       city: city || undefined,
-      state: province || undefined, // provincia/suddivisione se dedotta
+      state: province || undefined,   // <- precompila "Provincia" con sigla (es. MN)
       country,
     };
 
-    // Customer senza email (così Link non parte da solo)
+    // Customer (senza email → Link non parte da solo)
     const createdCustomer = await stripe.customers.create({
       name,
       phone,
@@ -235,24 +188,18 @@ export default async function handler(req, res) {
       shipping: (name || addressForStripe.line1)
         ? { name: name || undefined, phone: phone || undefined, address: addressForStripe }
         : undefined,
-      metadata: {
-        note: note || '',
-        email_hint: emailHint || '',
-        source: 'oasi-busatello-v4',
-      },
+      metadata: { note: note || '', email_hint: emailHint || '', source: 'oasi-busatello-v4' },
     });
     const customerId = createdCustomer.id;
 
-    const origin =
-      req.headers.origin
-      || (req.headers.host ? `https://${req.headers.host}` : 'http://localhost:3000');
+    const origin = req.headers.origin || (req.headers.host ? `https://${req.headers.host}` : 'http://localhost:3000');
 
-    // ---------- Sessione Checkout ----------
+    // ---------- Checkout Session ----------
     const sessionParams = {
       mode: 'payment',
       line_items,
 
-      // Lasciamo a Stripe i metodi disponibili (card + wallet). Senza email, Link non parte da solo.
+      // Lasciamo a Stripe decidere i metodi (card + wallet). Niente email → Link resta opzionale.
       // payment_method_types: ['card','link','amazon_pay'],
 
       billing_address_collection: 'required',
@@ -260,7 +207,6 @@ export default async function handler(req, res) {
       shipping_address_collection: { allowed_countries: ['IT', 'SM', 'VA'] },
       shipping_options: shippingOptions,
 
-      // Default senza creare nuove pagine: atterra in home con query
       success_url: success_url || `${origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  cancel_url  || `${origin}/?checkout=cancel`,
 
@@ -278,11 +224,9 @@ export default async function handler(req, res) {
         ...metadata,
       },
 
-      // Prefill via customer; aggiorna se l’utente modifica nel Checkout
       customer: customerId,
       customer_update: { address: 'auto', name: 'auto', shipping: 'auto' },
-
-      // IMPORTANTISSIMO: niente customer_email → Link resta opzionale
+      // niente customer_email
     };
 
     const session = await stripe.checkout.sessions.create(sessionParams);
@@ -290,7 +234,6 @@ export default async function handler(req, res) {
 
   } catch (err) {
     console.error('Stripe create session error:', err);
-    // Errori di prezzo/cart mal formati finiscono qui
     return res.status(500).json({ error: err?.raw?.message || err.message || 'Stripe error' });
   }
 }
